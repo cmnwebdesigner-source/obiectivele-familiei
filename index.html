@@ -1,1032 +1,799 @@
 <!DOCTYPE html>
 <html lang="ro">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Obiectivele Familiei</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: { primary: '#4f46e5' }
-                }
-            }
-        }
-    </script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-        body { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
-        .hide-scroll::-webkit-scrollbar { display: none; }
-        .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
-        .fade-in { animation: fadeIn 0.25s ease-in-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-        .modal-backdrop { background-color: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px); }
-        .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
-        .calendar-strip { scroll-snap-type: x mandatory; }
-        .calendar-day { scroll-snap-align: center; }
-        .calendar-touch-zone { touch-action: pan-y; }
-        .calendar-days-track { will-change: transform; transition: transform .22s ease; }
-        .calendar-days-track.dragging { transition: none; }
-        .goal-card { transition: transform .15s ease, box-shadow .15s ease; }
-        .goal-card:active { transform: scale(.985); }
-        .soft-no-fade { animation: none !important; }
-        .calendar-mini { touch-action: pan-y; }
-        .calendar-date-card { transition: transform .18s ease, opacity .18s ease; }
-        .calendar-date-card.dragging { transition: none; }
-        .glass-card { box-shadow: 0 14px 35px rgba(15, 23, 42, .06); }
-        .confetti-piece {
-            position: fixed;
-            top: -12px;
-            width: 8px;
-            height: 12px;
-            border-radius: 3px;
-            z-index: 9999;
-            animation: confettiFall 1.45s ease-out forwards;
-        }
-        @keyframes confettiFall {
-            0% { transform: translateY(0) rotate(0deg); opacity: 1; }
-            100% { transform: translateY(105vh) rotate(720deg); opacity: 0; }
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Obiectivele Familiei</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+    :root {
+      --bg: #0b0c0f;
+      --panel: rgba(22, 24, 29, .92);
+      --panel-soft: rgba(255,255,255,.055);
+      --line: rgba(255,255,255,.10);
+      --text: #f4f1e8;
+      --muted: #9b9b9b;
+      --gold: #d6b15d;
+      --gold-2: #f0d98b;
+      --silver: #aeb2ba;
+      --danger: #e35d5d;
+      --success: #61c487;
+      --shadow: 0 22px 60px rgba(0,0,0,.36);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 20% 0%, rgba(214,177,93,.22), transparent 28%),
+        radial-gradient(circle at 90% 12%, rgba(174,178,186,.12), transparent 30%),
+        linear-gradient(180deg, #13151a 0%, #08090b 100%);
+      -webkit-tap-highlight-color: transparent;
+      overscroll-behavior: none;
+    }
+
+    button, input, textarea { font-family: inherit; }
+    button { border: 0; cursor: pointer; }
+    input, textarea { outline: none; }
+
+    .app-shell {
+      max-width: 430px;
+      min-height: 100vh;
+      margin: 0 auto;
+      position: relative;
+      background: linear-gradient(180deg, rgba(18,20,25,.98), rgba(9,10,13,.98));
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .screen {
+      min-height: 100vh;
+      padding: 18px 16px 92px;
+      overflow-y: auto;
+      scrollbar-width: none;
+      animation: fade .18s ease-out;
+    }
+    .screen::-webkit-scrollbar { display:none; }
+
+    .screen.no-nav { padding-bottom: 22px; }
+
+    @keyframes fade {
+      from { opacity: .75; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .glass {
+      background: linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.035));
+      border: 1px solid var(--line);
+      box-shadow: 0 10px 30px rgba(0,0,0,.16);
+      backdrop-filter: blur(14px);
+    }
+
+    .top-card {
+      border-radius: 30px;
+      padding: 18px;
+      background:
+        linear-gradient(135deg, rgba(214,177,93,.18), rgba(255,255,255,.035)),
+        linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.035));
+      border: 1px solid rgba(214,177,93,.20);
+    }
+
+    .section { margin-top: 18px; }
+    .section-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin: 0 2px 10px;
+      color: var(--text);
+      font-size: 15px;
+      font-weight: 500;
+      letter-spacing: -.02em;
+    }
+    .section-head small { color: var(--muted); font-weight: 400; }
+
+    .card {
+      border-radius: 24px;
+      padding: 15px;
+      background: rgba(255,255,255,.055);
+      border: 1px solid rgba(255,255,255,.09);
+    }
+
+    .goal-card {
+      border-radius: 22px;
+      padding: 14px;
+      background: rgba(255,255,255,.052);
+      border: 1px solid rgba(255,255,255,.085);
+      transition: transform .12s ease, background .12s ease;
+    }
+    .goal-card:active { transform: scale(.988); background: rgba(255,255,255,.075); }
+
+    .goal-title { font-size: 14px; font-weight: 500; color: var(--text); }
+    .goal-owner { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .goal-money { font-size: 13px; color: var(--text); font-weight: 500; white-space: nowrap; }
+    .muted { color: var(--muted); }
+
+    .progress {
+      height: 7px;
+      border-radius: 99px;
+      background: rgba(255,255,255,.10);
+      overflow: hidden;
+    }
+    .progress > span {
+      display: block;
+      height: 100%;
+      border-radius: 99px;
+      background: linear-gradient(90deg, var(--gold), var(--gold-2));
+      transition: width .28s ease;
+    }
+    .progress.partner > span { background: linear-gradient(90deg, #9ba0aa, #d4d7de); }
+    .progress.done > span { background: linear-gradient(90deg, #4bbf7d, #87e5ad); }
+
+    .badge {
+      font-size: 8px;
+      padding: 3px 6px;
+      border-radius: 99px;
+      background: rgba(97,196,135,.16);
+      color: #9ef0bd;
+      border: 1px solid rgba(97,196,135,.25);
+      letter-spacing: .05em;
+      line-height: 1;
+    }
+
+    .btn {
+      border-radius: 14px;
+      padding: 10px 12px;
+      font-size: 12px;
+      font-weight: 500;
+      transition: transform .12s ease, opacity .12s ease;
+    }
+    .btn:active { transform: scale(.97); }
+    .btn-gold { background: linear-gradient(135deg, #caa24e, #f1d986); color: #16120a; }
+    .btn-soft { background: rgba(255,255,255,.08); color: var(--text); border: 1px solid rgba(255,255,255,.10); }
+    .btn-danger { background: rgba(227,93,93,.16); color: #ff9a9a; border: 1px solid rgba(227,93,93,.20); }
+    .btn-full { width: 100%; padding: 14px 16px; border-radius: 18px; }
+
+    .icon-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 18px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255,255,255,.07);
+      border: 1px solid rgba(255,255,255,.10);
+      color: var(--gold-2);
+    }
+
+    .avatar {
+      width: 44px;
+      height: 44px;
+      border-radius: 18px;
+      background: linear-gradient(135deg, #d6b15d, #4b4e56);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      overflow:hidden;
+      border:1px solid rgba(255,255,255,.14);
+      color:#0c0c0c;
+      font-weight:600;
+    }
+    .avatar.large { width: 86px; height: 86px; border-radius: 30px; font-size: 28px; }
+    .avatar img { width:100%; height:100%; object-fit:cover; }
+
+    .input {
+      width: 100%;
+      background: rgba(255,255,255,.07);
+      border: 1px solid rgba(255,255,255,.10);
+      color: var(--text);
+      padding: 14px 14px;
+      border-radius: 18px;
+      font-size: 14px;
+    }
+    .input::placeholder { color: rgba(255,255,255,.30); }
+    .label { font-size: 12px; color: var(--muted); margin: 0 0 7px 4px; }
+
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      max-width: 430px;
+      width: 100%;
+      height: 76px;
+      padding: 10px 22px max(10px, env(safe-area-inset-bottom));
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      background: rgba(9,10,13,.82);
+      backdrop-filter: blur(18px);
+      border-top: 1px solid rgba(255,255,255,.08);
+      z-index: 40;
+    }
+    .nav-item {
+      color: var(--muted);
+      width: 76px;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap: 4px;
+      font-size: 10px;
+      background: transparent;
+    }
+    .nav-item.active { color: var(--gold-2); }
+    .nav-plus {
+      width: 58px;
+      height: 58px;
+      border-radius: 24px;
+      background: linear-gradient(135deg, #caa24e, #f1d986);
+      color: #12100b;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      box-shadow: 0 12px 28px rgba(214,177,93,.24);
+      margin-top: -24px;
+    }
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.68);
+      backdrop-filter: blur(8px);
+      z-index: 70;
+      display:flex;
+      align-items:flex-end;
+      justify-content:center;
+    }
+    .sheet {
+      width:100%;
+      max-width:430px;
+      border-radius: 30px 30px 0 0;
+      padding: 18px;
+      background: linear-gradient(180deg, rgba(26,28,34,.98), rgba(14,15,18,.98));
+      border: 1px solid rgba(255,255,255,.10);
+      box-shadow: 0 -20px 50px rgba(0,0,0,.36);
+      animation: sheetUp .16s ease-out;
+    }
+    @keyframes sheetUp { from { transform: translateY(18px); opacity: .8; } to { transform: translateY(0); opacity:1; } }
+    .grab { width:42px; height:4px; border-radius:99px; background:rgba(255,255,255,.16); margin:0 auto 18px; }
+
+    .calendar-card {
+      border-radius: 24px;
+      padding: 12px;
+      background: rgba(255,255,255,.052);
+      border: 1px solid rgba(255,255,255,.085);
+      touch-action: pan-y;
+      user-select: none;
+    }
+    .day-pill {
+      flex: 1;
+      min-width: 0;
+      border-radius: 18px;
+      padding: 10px 4px;
+      color: var(--muted);
+      background: transparent;
+    }
+    .day-pill.active {
+      color: #15120a;
+      background: linear-gradient(135deg, #d6b15d, #f0d98b);
+    }
+    .day-label { font-size: 10px; text-transform: uppercase; opacity:.8; }
+    .day-number { font-size: 18px; font-weight: 500; line-height: 1.1; }
+
+    .stat-grid { display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+    .stat-mini { padding: 13px 10px; border-radius: 20px; background: rgba(255,255,255,.052); border: 1px solid rgba(255,255,255,.085); }
+    .stat-mini span { font-size: 11px; color: var(--muted); display:block; margin-bottom:6px; }
+    .stat-mini b { font-size: 15px; color: var(--text); font-weight: 500; }
+
+    .calc-grid { display:grid; grid-template-columns: repeat(4, 1fr); gap: 9px; }
+    .calc-key { height: 56px; border-radius: 20px; background: rgba(255,255,255,.075); color: var(--text); font-size: 17px; font-weight: 500; border: 1px solid rgba(255,255,255,.08); }
+    .calc-key.op { color: var(--gold-2); background: rgba(214,177,93,.12); }
+    .calc-key.clear { color: #ff9a9a; background: rgba(227,93,93,.12); }
+
+    .confetti-piece {
+      position: fixed;
+      top: -10px;
+      width: 7px;
+      height: 12px;
+      border-radius: 3px;
+      z-index: 999;
+      animation: fall 1.4s ease-out forwards;
+    }
+    @keyframes fall { to { transform: translateY(105vh) rotate(680deg); opacity:0; } }
+
+    .loading {
+      min-height: 100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      color: var(--gold-2);
+      font-size: 14px;
+    }
+  </style>
 </head>
-<body class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 antialiased min-h-screen transition-colors duration-300">
-    <div id="app" class="max-w-md mx-auto min-h-screen flex flex-col relative pb-20 shadow-2xl bg-slate-50 dark:bg-slate-900">
-        <div class="flex h-screen items-center justify-center text-indigo-500 font-bold">Se încarcă...</div>
-    </div>
-    <div id="modalContainer"></div>
-    <div id="confettiRoot"></div>
+<body>
+  <div id="app" class="app-shell"><div class="loading">Se încarcă...</div></div>
+  <div id="modalContainer"></div>
+  <div id="confettiRoot"></div>
 
-    <script type="module">
-        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+  <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 
-        const supabaseUrl = 'https://hfqsouqtqvyxegcrabnc.supabase.co';
-        const supabaseKey = 'sb_publishable_eqlbyUXpwcp-i-dPhFPsmA_wHqDW1AD';
-        const supabase = createClient(supabaseUrl, supabaseKey);
+    const supabaseUrl = 'https://hfqsouqtqvyxegcrabnc.supabase.co';
+    const supabaseKey = 'sb_publishable_eqlbyUXpwcp-i-dPhFPsmA_wHqDW1AD';
+    const supabase = createClient(supabaseUrl, supabaseKey, { auth: { persistSession: true, autoRefreshToken: true } });
 
-        let currentUser = null;
-        let goals = [];
-        let transactions = [];
-        let profiles = [];
-        let calculatorHistory = [];
-        let currentTab = 'home';
-        let previousTab = 'home';
-        let selectedGoalId = null;
-        let selectedDate = new Date().toISOString().split('T')[0];
-        let realTimeSubscription = null;
-        let deferredPrompt = null;
-        let calcExpression = '';
-        let calcResult = '0';
-        let touchStartX = 0;
-        let touchCurrentX = 0;
-        let calendarDragging = false;
-        let calendarSwipeBlockClickUntil = 0;
-        let softRefreshTimer = null;
-        let isSoftRendering = false;
-        window.selectedSignupRole = 'sot';
+    let currentUser = null;
+    let goals = [];
+    let transactions = [];
+    let profiles = [];
+    let calculatorHistory = [];
+    let currentPage = 'home';
+    let previousPage = 'home';
+    let selectedDate = new Date().toISOString().split('T')[0];
+    let selectedGoalId = null;
+    let subscription = null;
+    let refreshTimer = null;
+    let calcExpression = '';
+    let calcResult = '0';
+    let swipeStartX = 0;
+    let swipeMoved = false;
+    window.selectedSignupRole = 'sot';
 
-        const appContainer = document.getElementById('app');
+    const app = document.getElementById('app');
+    const modal = document.getElementById('modalContainer');
 
-        const money = (value) => {
-            const n = Number(value || 0);
-            return n.toLocaleString('ro-RO', { maximumFractionDigits: 2 });
-        };
+    const svg = {
+      home: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-5v-6h-4v6H5a1 1 0 0 1-1-1v-9.5Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>',
+      user: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M20 21a8 8 0 0 0-16 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="1.8"/></svg>',
+      plus: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
+      calc: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="5" y="3" width="14" height="18" rx="3" stroke="currentColor" stroke-width="1.8"/><path d="M8 7h8M8 12h.01M12 12h.01M16 12h.01M8 16h.01M12 16h.01M16 16h.01" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>',
+      back: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M15 18 9 12l6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+      calendar: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="4" y="5" width="16" height="15" rx="3" stroke="currentColor" stroke-width="1.8"/><path d="M8 3v4M16 3v4M4 10h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
+      moon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M20 14.4A7.7 7.7 0 0 1 9.6 4a8 8 0 1 0 10.4 10.4Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>',
+      camera: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M7 7h2l1.5-2h3L15 7h2a3 3 0 0 1 3 3v7a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3v-7a3 3 0 0 1 3-3Z" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="13.5" r="3" stroke="currentColor" stroke-width="1.8"/></svg>',
+      logOut: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M10 6H6a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h4M14 8l4 4-4 4M18 12H9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+    };
 
-        const todayISO = () => new Date().toISOString().split('T')[0];
+    const money = (v) => Number(v || 0).toLocaleString('ro-RO', { maximumFractionDigits: 2 });
+    const todayISO = () => new Date().toISOString().split('T')[0];
+    const addDays = (dateStr, days) => { const d = new Date(dateStr + 'T12:00:00'); d.setDate(d.getDate() + days); return d.toISOString().split('T')[0]; };
+    const formatFullDate = (dateStr) => new Date(dateStr + 'T12:00:00').toLocaleDateString('ro-RO', { weekday:'long', day:'2-digit', month:'long' });
+    const getProfile = (email) => profiles.find(p => p.email === email);
+    const getRole = (email) => email === currentUser?.email ? (getProfile(email)?.role || currentUser?.user_metadata?.role || 'sot') : (getProfile(email)?.role || 'sotie');
+    const roleLabel = (role) => role === 'sotie' ? 'Soție' : 'Soț';
+    const ownerLabel = (email) => email === currentUser?.email ? 'Tu' : roleLabel(getRole(email));
+    const partnerEmail = () => profiles.find(p => p.email && p.email !== currentUser?.email)?.email || goals.find(g => g.owner !== currentUser?.email)?.owner || null;
 
-        const addDays = (dateStr, days) => {
-            const d = new Date(dateStr + 'T12:00:00');
-            d.setDate(d.getDate() + days);
-            return d.toISOString().split('T')[0];
-        };
+    async function safeFetch(promise) { const { data, error } = await promise; if (error) { console.error(error); return []; } return data || []; }
 
-        const formatShortDate = (dateStr) => {
-            const d = new Date(dateStr + 'T12:00:00');
-            return d.toLocaleDateString('ro-RO', { weekday: 'short', day: '2-digit', month: 'short' });
-        };
+    async function ensureOwnProfile() {
+      if (!currentUser) return;
+      const role = currentUser.user_metadata?.role || window.selectedSignupRole || 'sot';
+      await supabase.from('profiles').upsert({ id: currentUser.id, email: currentUser.email, role }, { onConflict: 'id' });
+    }
 
-        const formatFullDate = (dateStr) => {
-            const d = new Date(dateStr + 'T12:00:00');
-            return d.toLocaleDateString('ro-RO', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' });
-        };
+    async function fetchData({ render = true, soft = false } = {}) {
+      if (!currentUser) return;
+      const [g, t, p, c] = await Promise.all([
+        safeFetch(supabase.from('goals').select('*').order('created_at', { ascending: false })),
+        safeFetch(supabase.from('transactions').select('*').order('timestamp', { ascending: false })),
+        safeFetch(supabase.from('profiles').select('*').order('created_at', { ascending: true })),
+        safeFetch(supabase.from('calculator_history').select('*').eq('user_email', currentUser.email).order('created_at', { ascending: false }).limit(30))
+      ]);
+      goals = g; transactions = t; profiles = p; calculatorHistory = c;
+      if (render) renderApp(soft);
+    }
 
-        const getProfile = (email) => profiles.find(p => p.email === email);
-        const getRole = (email) => {
-            if (email === currentUser?.email) return getProfile(email)?.role || currentUser?.user_metadata?.role || 'sot';
-            return getProfile(email)?.role || 'sotie';
-        };
-        const roleLabel = (role) => role === 'sotie' ? 'Soție' : 'Soț';
-        const ownerLabel = (email) => email === currentUser?.email ? 'Tu' : roleLabel(getRole(email));
-        const getPartnerEmail = () => {
-            const p = profiles.find(p => p.email && p.email !== currentUser?.email);
-            if (p) return p.email;
-            const goal = goals.find(g => g.owner !== currentUser?.email);
-            return goal ? goal.owner : null;
-        };
+    function setupRealtime() {
+      if (subscription) supabase.removeChannel(subscription);
+      subscription = supabase.channel('smooth-sync')
+        .on('postgres_changes', { event:'*', schema:'public', table:'goals' }, scheduleSoftRefresh)
+        .on('postgres_changes', { event:'*', schema:'public', table:'transactions' }, scheduleSoftRefresh)
+        .on('postgres_changes', { event:'*', schema:'public', table:'profiles' }, scheduleSoftRefresh)
+        .on('postgres_changes', { event:'*', schema:'public', table:'calculator_history' }, scheduleSoftRefresh)
+        .subscribe();
+    }
 
-        const redBtn = 'bg-red-500 hover:bg-red-600 text-white';
-        const indigoBtn = 'bg-indigo-600 hover:bg-indigo-700 text-white';
-        const accentButton = (role) => role === 'sotie' ? redBtn : indigoBtn;
-        const accentText = (role) => role === 'sotie' ? 'text-red-600 dark:text-red-400' : 'text-indigo-600 dark:text-indigo-400';
-        const accentBorder = (role) => role === 'sotie' ? 'border-red-400' : 'border-indigo-500';
-        const accentBgSoft = (role) => role === 'sotie' ? 'bg-red-50 dark:bg-red-900/20' : 'bg-indigo-50 dark:bg-indigo-900/20';
-        const accentBar = (role) => role === 'sotie' ? 'bg-red-500' : 'bg-indigo-500';
+    function scheduleSoftRefresh() {
+      clearTimeout(refreshTimer);
+      refreshTimer = setTimeout(() => fetchData({ soft: true }), 280);
+    }
 
-        const initTheme = () => {
-            const savedTheme = localStorage.getItem('appTheme') || 'light';
-            document.documentElement.classList.toggle('dark', savedTheme === 'dark');
-        };
-        initTheme();
+    function renderApp(soft = false) {
+      const openSheet = modal.innerHTML.trim().length > 0;
+      if (soft && openSheet) return;
+      const oldScreen = app.querySelector('.screen');
+      const scrollTop = oldScreen ? oldScreen.scrollTop : 0;
+      let content = '';
+      let nav = true;
+      if (currentPage === 'home') content = homeHTML();
+      else if (currentPage === 'profile') content = profileHTML();
+      else if (currentPage === 'partner') content = partnerHTML();
+      else if (currentPage === 'calculator') { content = calculatorHTML(); nav = false; }
+      else if (currentPage === 'goalStats') { content = statsHTML(); nav = false; }
+      else content = homeHTML();
+      app.innerHTML = `<div class="screen ${nav ? '' : 'no-nav'}">${content}</div>${nav ? bottomNavHTML() : ''}`;
+      if (soft) requestAnimationFrame(() => { const s = app.querySelector('.screen'); if (s) s.scrollTop = scrollTop; });
+    }
 
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            deferredPrompt = e;
-        });
+    function avatarHTML(email = currentUser?.email, large = false) {
+      const p = email ? getProfile(email) : null;
+      const cls = large ? 'avatar large' : 'avatar';
+      if (p?.avatar) return `<div class="${cls}"><img src="${p.avatar}" alt="Avatar"></div>`;
+      return `<div class="${cls}">${(email || '?').charAt(0).toUpperCase()}</div>`;
+    }
 
-        const safeFetch = async (label, promise) => {
-            try {
-                const { data, error } = await promise;
-                if (error) {
-                    console.error(label, error);
-                    return [];
-                }
-                return data || [];
-            } catch (error) {
-                console.error(label, error);
-                return [];
-            }
-        };
+    function authHTML(isLogin = true) {
+      const roleSelect = isLogin ? '' : `
+        <div>
+          <p class="label">Profil</p>
+          <div class="grid grid-cols-2 gap-2">
+            <button id="roleSot" class="btn btn-gold" onclick="window.appActions.selectRole('sot')">Soț</button>
+            <button id="roleSotie" class="btn btn-soft" onclick="window.appActions.selectRole('sotie')">Soție</button>
+          </div>
+        </div>`;
+      app.innerHTML = `
+        <div class="screen no-nav flex flex-col justify-center">
+          <div class="top-card mb-5">
+            <div class="icon-btn mb-5">${svg.home}</div>
+            <h1 class="text-[30px] leading-tight font-medium tracking-[-.04em]">Obiectivele Familiei</h1>
+            <p class="text-sm muted mt-2">${isLogin ? 'Conectare în aplicație' : 'Creează contul vostru'}</p>
+          </div>
+          <div class="card space-y-4">
+            ${roleSelect}
+            <div><p class="label">Email</p><input id="emailInput" class="input" type="email" autocomplete="email" placeholder="tu@familie.ro"></div>
+            <div><p class="label">Parolă</p><input id="passInput" class="input" type="password" autocomplete="${isLogin ? 'current-password' : 'new-password'}" placeholder="••••••••"></div>
+            <label class="flex items-center gap-3 text-sm muted px-1">
+              <input id="keepLoggedInput" type="checkbox" checked style="accent-color:#d6b15d; width:18px; height:18px;">
+              Ține-mă conectat
+            </label>
+            <button id="authBtn" class="btn btn-gold btn-full" onclick="window.appActions.handleAuth(${isLogin})">${isLogin ? 'Conectare' : 'Creează cont'}</button>
+          </div>
+          <button class="mt-5 text-sm muted" onclick="window.appActions.toggleAuthMode(${!isLogin})">${isLogin ? 'Nu ai cont? Creează unul.' : 'Ai deja cont? Conectează-te.'}</button>
+        </div>`;
+    }
 
-        const ensureOwnProfile = async () => {
-            if (!currentUser) return;
-            const existingRole = currentUser.user_metadata?.role || window.selectedSignupRole || 'sot';
-            await supabase.from('profiles').upsert({
-                id: currentUser.id,
-                email: currentUser.email,
-                role: existingRole
-            }, { onConflict: 'id' });
-        };
+    function homeHTML() {
+      const myRole = getRole(currentUser.email);
+      const myGoals = goals.filter(g => g.owner === currentUser.email);
+      const otherGoals = goals.filter(g => g.owner !== currentUser.email);
+      const selectedTransactions = transactions.filter(t => String(t.date).slice(0,10) === selectedDate);
+      const totalDay = selectedTransactions.reduce((s,t) => s + Number(t.amount || 0), 0);
+      const offered = transactions.filter(t => t.from_role === currentUser.email && t.to_role !== currentUser.email).reduce((s,t) => s + Math.max(0, Number(t.amount || 0)), 0);
+      const received = transactions.filter(t => t.to_role === currentUser.email && t.from_role !== currentUser.email).reduce((s,t) => s + Math.max(0, Number(t.amount || 0)), 0);
+      const partnerLabel = myRole === 'sot' ? 'Soției' : 'Soțului';
+      return `
+        <div class="flex items-center justify-between mb-5">
+          <div>
+            <p class="muted text-xs">Salut</p>
+            <h2 class="text-[28px] font-medium tracking-[-.04em]">${roleLabel(myRole)}</h2>
+          </div>
+          <div class="flex items-center gap-2">
+            <button class="icon-btn" onclick="window.appActions.openCalculator()">${svg.calc}</button>
+            ${avatarHTML(currentUser.email)}
+          </div>
+        </div>
 
-        const checkAuth = async () => {
-            appContainer.innerHTML = `<div class="flex h-screen items-center justify-center"><i class="fas fa-spinner fa-spin text-4xl text-indigo-500"></i></div>`;
+        <div class="top-card">
+          <p class="muted text-xs mb-3">Rezumat</p>
+          <div class="grid grid-cols-2 gap-3">
+            <div><p class="muted text-xs">Ai oferit</p><p class="text-xl font-medium">${money(offered)} <span class="text-xs muted">RON</span></p></div>
+            <div><p class="muted text-xs">Ai primit</p><p class="text-xl font-medium">${money(received)} <span class="text-xs muted">RON</span></p></div>
+          </div>
+        </div>
 
-            supabase.auth.onAuthStateChange(async (_event, session) => {
-                if (authRenderLock) return;
-                if (session) {
-                    currentUser = session.user;
-                    await ensureOwnProfile().catch(console.error);
-                    await fetchData({ soft: true }).catch(console.error);
-                    setupRealtime();
-                } else {
-                    currentUser = null;
-                    goals = [];
-                    transactions = [];
-                    profiles = [];
-                    calculatorHistory = [];
-                    currentTab = 'home';
-                    renderAuth();
-                }
-            });
+        <div class="section">
+          <div class="section-head"><span>Obiectivele mele</span><small>${myGoals.length}</small></div>
+          <div class="space-y-3">${myGoals.length ? myGoals.map(g => goalCard(g, true)).join('') : emptyHTML('Niciun obiectiv adăugat.')}</div>
+        </div>
 
-            const { data: { session }, error } = await supabase.auth.getSession();
-            if (error) throw error;
-            if (session) {
-                const keepSignedIn = localStorage.getItem('keepSignedIn') !== '0';
-                const sameBrowserSession = sessionStorage.getItem('activeSession') === '1';
-                if (!keepSignedIn && !sameBrowserSession) {
-                    await supabase.auth.signOut();
-                    currentUser = null;
-                    renderAuth();
-                    return;
-                }
-                currentUser = session.user;
-                await ensureOwnProfile().catch(console.error);
-                await fetchData();
-                setupRealtime();
-            } else {
-                renderAuth();
-            }
-        };
+        <div class="section">
+          <div class="section-head" onclick="window.appActions.switchPage('partner')"><span>Obiectivele ${partnerLabel}</span><small>vezi profil</small></div>
+          <div class="space-y-3">${otherGoals.length ? otherGoals.slice(0,2).map(g => goalCard(g, false)).join('') : emptyHTML('Partenerul nu are obiective.')}</div>
+        </div>
 
-        const renderMainSoft = () => {
-            const modalOpen = (document.getElementById('modalContainer')?.innerHTML || '').trim().length > 0;
-            if (modalOpen) return;
-            const activeElementId = document.activeElement?.id || '';
-            const scroller = appContainer.querySelector('[data-scroll-area="true"]');
-            const scrollTop = scroller ? scroller.scrollTop : 0;
-            isSoftRendering = true;
-            renderMain();
-            isSoftRendering = false;
-            requestAnimationFrame(() => {
-                const newScroller = appContainer.querySelector('[data-scroll-area="true"]');
-                if (newScroller) newScroller.scrollTop = scrollTop;
-                if (activeElementId) document.getElementById(activeElementId)?.focus?.();
-            });
-        };
+        <div class="section">
+          <div class="section-head"><span class="flex items-center gap-2">${svg.calendar} Istoric</span><small>glisează</small></div>
+          ${calendarHTML()}
+          <div class="card mt-3 flex items-center justify-between">
+            <span class="text-sm muted">Toată ziua</span>
+            <span class="text-sm" style="color:${totalDay < 0 ? 'var(--danger)' : 'var(--success)'}">${totalDay >= 0 ? '+' : ''}${money(totalDay)} RON</span>
+          </div>
+          <div class="space-y-2 mt-3">${selectedTransactions.length ? selectedTransactions.map(transactionRow).join('') : emptyHTML('Nicio mișcare în ziua asta.')}</div>
+        </div>`;
+    }
 
-        const fetchData = async (options = {}) => {
-            if (!currentUser) return;
-            const shouldRender = options.render !== false;
-            const soft = options.soft === true;
-            const [goalsData, transData, profileData, calcData] = await Promise.all([
-                safeFetch('goals', supabase.from('goals').select('*').order('created_at', { ascending: false })),
-                safeFetch('transactions', supabase.from('transactions').select('*').order('timestamp', { ascending: false })),
-                safeFetch('profiles', supabase.from('profiles').select('*').order('created_at', { ascending: true })),
-                safeFetch('calculator_history', supabase.from('calculator_history').select('*').eq('user_email', currentUser.email).order('created_at', { ascending: false }).limit(30))
-            ]);
-            goals = goalsData;
-            transactions = transData;
-            profiles = profileData;
-            calculatorHistory = calcData;
-            if (shouldRender) {
-                if (soft) renderMainSoft();
-                else renderMain();
-            }
-        };
-
-        const scheduleSoftFetch = () => {
-            clearTimeout(softRefreshTimer);
-            softRefreshTimer = setTimeout(() => fetchData({ soft: true }), 850);
-        };
-
-        const setupRealtime = () => {
-            if (realTimeSubscription) supabase.removeChannel(realTimeSubscription);
-            realTimeSubscription = supabase.channel('public-changes')
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'goals' }, scheduleSoftFetch)
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, scheduleSoftFetch)
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, scheduleSoftFetch)
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'calculator_history' }, scheduleSoftFetch)
-                .subscribe();
-        };
-
-        const renderAuth = (isLogin = true) => {
-            const roleSelector = isLogin ? '' : `
-                <div class="mb-4 fade-in">
-                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Alege Profilul:</label>
-                    <div class="flex gap-3">
-                        <button type="button" id="btnRoleSot" onclick="window.appActions.selectRole('sot')" class="flex-1 py-3 rounded-xl font-bold border-2 transition-all border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400">Soț</button>
-                        <button type="button" id="btnRoleSotie" onclick="window.appActions.selectRole('sotie')" class="flex-1 py-3 rounded-xl font-bold border-2 transition-all border-slate-200 dark:border-slate-700 text-slate-500">Soție</button>
-                    </div>
-                </div>
-            `;
-
-            appContainer.innerHTML = `
-                <div class="flex-1 flex flex-col justify-center px-6 py-12 fade-in min-h-screen bg-white dark:bg-slate-900">
-                    <div class="text-center mb-10">
-                        <div class="inline-flex items-center justify-center w-20 h-20 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 rounded-full mb-4 shadow-sm">
-                            <i class="fas fa-heart text-3xl"></i>
-                        </div>
-                        <h1 class="text-3xl font-bold text-slate-800 dark:text-white">Obiective Familiei</h1>
-                        <p class="text-slate-500 dark:text-slate-400 mt-2">${isLogin ? 'Autentificare cont' : 'Creare cont nou'}</p>
-                    </div>
-
-                    <div class="space-y-4 w-full">
-                        ${roleSelector}
-                        <div>
-                            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Email</label>
-                            <input type="email" id="emailInput" autocomplete="email" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none dark:text-white" placeholder="tu@familie.ro">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Parolă</label>
-                            <input type="password" id="passInput" autocomplete="${isLogin ? 'current-password' : 'new-password'}" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none dark:text-white" placeholder="••••••••">
-                        </div>
-                        <label class="flex items-center justify-between gap-3 p-3 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 cursor-pointer">
-                            <span class="text-sm font-semibold text-slate-700 dark:text-slate-200">Ține-mă conectat</span>
-                            <input type="checkbox" id="keepSignedInInput" class="w-5 h-5 accent-indigo-600" ${localStorage.getItem('keepSignedIn') !== '0' ? 'checked' : ''}>
-                        </label>
-                        <p class="text-xs text-slate-400 dark:text-slate-500 -mt-1"><i class="fas fa-lock mr-1"></i>Salvează parola pentru o conectare mai rapidă.</p>
-                        <button id="authBtn" onclick="window.appActions.handleAuth(${isLogin})" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition-all shadow-md mt-4">
-                            ${isLogin ? 'Conectare' : 'Creează Cont'}
-                        </button>
-                    </div>
-
-                    <div class="mt-6 text-center">
-                        <button onclick="window.appActions.toggleAuthMode(${!isLogin})" class="text-indigo-600 dark:text-indigo-400 font-medium hover:underline text-sm">
-                            ${isLogin ? 'Nu ai cont? Creează unul acum.' : 'Ai deja cont? Conectează-te.'}
-                        </button>
-                    </div>
-                </div>
-            `;
-        };
-
-        const renderMain = () => {
-            let content = '';
-            let showNav = true;
-            if (currentTab === 'home') content = getHomeHTML();
-            else if (currentTab === 'profile') content = getProfileHTML();
-            else if (currentTab === 'partner') content = getPartnerProfileHTML();
-            else if (currentTab === 'calculator') { content = getCalculatorHTML(); showNav = false; }
-            else if (currentTab === 'goalStats') { content = getGoalStatsHTML(); showNav = false; }
-            else content = getHomeHTML();
-
-            appContainer.innerHTML = `
-                <div data-scroll-area="true" class="flex-1 overflow-y-auto hide-scroll ${showNav ? 'pb-24' : 'pb-6'} p-4 md:p-6 ${isSoftRendering ? 'soft-no-fade' : 'fade-in'} h-full">
-                    ${content}
-                </div>
-                ${showNav ? getBottomNavHTML() : ''}
-            `;
-        };
-
-        const getHomeHTML = () => {
-            const myRole = getRole(currentUser.email);
-            const partnerRole = myRole === 'sot' ? 'sotie' : 'sot';
-            const myRoleName = roleLabel(myRole);
-            const partnerRoleName = myRole === 'sot' ? 'Soției' : 'Soțului';
-            const myGoals = goals.filter(g => g.owner === currentUser.email);
-            const partnerGoals = goals.filter(g => g.owner !== currentUser.email);
-            const selectedTransactions = transactions.filter(t => String(t.date).slice(0, 10) === selectedDate);
-            const totalSelected = selectedTransactions.reduce((sum, t) => sum + Number(t.amount || 0), 0);
-            const totalOferit = transactions.filter(t => t.from_role === currentUser.email && t.to_role !== currentUser.email).reduce((sum, t) => sum + Math.max(0, Number(t.amount || 0)), 0);
-            const totalPrimit = transactions.filter(t => t.to_role === currentUser.email && t.from_role !== currentUser.email).reduce((sum, t) => sum + Math.max(0, Number(t.amount || 0)), 0);
-
-            return `
-                <header class="flex justify-between items-center mb-5">
-                    <div>
-                        <h2 class="font-bold text-slate-800 dark:text-white text-2xl">Salut, ${myRoleName}!</h2>
-                        <p class="text-sm text-slate-500 dark:text-slate-400">Situația obiectivelor voastre</p>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <button onclick="window.appActions.openCalculator()" class="w-11 h-11 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shadow-sm">
-                            <i class="fas fa-calculator"></i>
-                        </button>
-                        ${getAvatarHtml(11, currentUser.email)}
-                    </div>
-                </header>
-
-                <div class="grid grid-cols-2 gap-3 mb-5">
-                    <div class="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm">
-                        <p class="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase mb-1">Ai oferit</p>
-                        <p class="text-2xl font-black text-slate-800 dark:text-white">${money(totalOferit)} <span class="text-sm font-medium text-slate-500">RON</span></p>
-                    </div>
-                    <div class="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm">
-                        <p class="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase mb-1">Ai primit</p>
-                        <p class="text-2xl font-black text-slate-800 dark:text-white">${money(totalPrimit)} <span class="text-sm font-medium text-slate-500">RON</span></p>
-                    </div>
-                </div>
-
-                <div class="space-y-6">
-                    <section class="bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-sm border border-slate-100 dark:border-slate-700">
-                        <div class="flex items-center justify-between mb-3">
-                            <h3 class="font-bold text-lg text-slate-800 dark:text-white">Obiectivele Mele</h3>
-                            <span class="h-1.5 w-16 rounded-full ${accentBar(myRole)}"></span>
-                        </div>
-                        <div class="space-y-3">
-                            ${myGoals.length === 0 ? `<p class="text-center text-sm text-slate-400 py-4">Niciun obiectiv adăugat.</p>` : myGoals.map(g => generateGoalCard(g, true)).join('')}
-                        </div>
-                    </section>
-
-                    <section class="${accentBgSoft(partnerRole)} rounded-2xl p-4 shadow-sm border border-slate-100 dark:border-slate-700">
-                        <div onclick="window.appActions.switchTab('partner')" class="flex items-center justify-between mb-3 cursor-pointer">
-                            <h3 class="font-bold text-lg text-slate-800 dark:text-white">Obiectivele ${partnerRoleName}</h3>
-                            <span class="h-1.5 w-16 rounded-full ${accentBar(partnerRole)}"></span>
-                        </div>
-                        <div class="space-y-3">
-                            ${partnerGoals.length === 0 ? `<p class="text-center text-sm text-slate-400 py-4">Partenerul nu are obiective.</p>` : partnerGoals.slice(0, 2).map(g => generateGoalCard(g, false)).join('')}
-                            ${partnerGoals.length > 2 ? `<button onclick="window.appActions.switchTab('partner')" class="w-full text-center text-sm font-medium ${accentText(partnerRole)} py-2 bg-white/70 dark:bg-slate-800 rounded-xl mt-2">Vezi toate cele ${partnerGoals.length} obiective</button>` : ''}
-                        </div>
-                    </section>
-
-                    <section class="bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-sm border border-slate-100 dark:border-slate-700">
-                        <div class="flex justify-between items-center mb-3">
-                            <h3 class="font-bold text-lg text-slate-800 dark:text-white"><i class="far fa-calendar-alt text-indigo-500 mr-2"></i>Istoric</h3>
-                            <span class="text-xs text-slate-400 dark:text-slate-500">glisează zilele</span>
-                        </div>
-                        ${getCalendarHTML()}
-                        <div class="bg-green-50 dark:bg-green-900/20 rounded-xl p-3 mb-4 flex justify-between items-center">
-                            <span class="text-sm font-medium text-green-700 dark:text-green-400">Toată ziua</span>
-                            <span class="font-bold text-lg ${totalSelected < 0 ? 'text-red-500' : 'text-green-600 dark:text-green-400'}">${totalSelected >= 0 ? '+' : ''}${money(totalSelected)} RON</span>
-                        </div>
-                        <div class="space-y-3">
-                            ${selectedTransactions.length === 0 ? `<p class="text-center py-2 text-slate-400 text-sm">Nicio mișcare în ziua asta.</p>` : selectedTransactions.map(t => getTransactionRow(t)).join('')}
-                        </div>
-                    </section>
-                </div>
-            `;
-        };
-
-        const getCalendarHTML = () => {
-            const prevDate = addDays(selectedDate, -1);
-            const nextDate = addDays(selectedDate, 1);
-            const isToday = selectedDate === todayISO();
-            return `
-                <div class="mb-4 select-none calendar-mini" onpointerdown="window.appActions.calendarSwipeStart(event)" onpointermove="window.appActions.calendarSwipeMove(event)" onpointerup="window.appActions.calendarSwipeEnd(event)" onpointercancel="window.appActions.calendarSwipeCancel(event)">
-                    <div id="calendarDaysTrack" class="calendar-date-card bg-slate-50 dark:bg-slate-900/70 border border-slate-100 dark:border-slate-700 rounded-3xl p-3">
-                        <div class="flex items-center justify-between gap-3">
-                            <button onclick="window.appActions.shiftDate(-1)" class="w-10 h-10 shrink-0 rounded-2xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-200 shadow-sm"><i class="fas fa-chevron-left text-xs"></i></button>
-                            <button onclick="window.appActions.changeDate('${todayISO()}')" class="flex-1 min-w-0 text-center active:scale-[.98] transition-transform">
-                                <p class="text-[10px] uppercase tracking-wider font-black ${isToday ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400'}">${isToday ? 'Azi' : 'Zi selectată'}</p>
-                                <p class="text-base font-black text-slate-800 dark:text-white capitalize truncate">${formatShortDate(selectedDate)}</p>
-                            </button>
-                            <button onclick="window.appActions.shiftDate(1)" class="w-10 h-10 shrink-0 rounded-2xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-200 shadow-sm"><i class="fas fa-chevron-right text-xs"></i></button>
-                        </div>
-                        <div class="grid grid-cols-3 gap-2 mt-3">
-                            <button onclick="window.appActions.changeDate('${prevDate}')" class="py-2 rounded-2xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 text-xs font-bold text-slate-500 dark:text-slate-300">Ieri</button>
-                            <button onclick="window.appActions.changeDate('${todayISO()}')" class="py-2 rounded-2xl ${isToday ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 text-slate-500 dark:text-slate-300'} text-xs font-bold">Azi</button>
-                            <button onclick="window.appActions.changeDate('${nextDate}')" class="py-2 rounded-2xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 text-xs font-bold text-slate-500 dark:text-slate-300">Mâine</button>
-                        </div>
-                    </div>
-                    <p class="text-[11px] text-center text-slate-400 mt-2">Glisează cardul pentru ziua anterioară / următoare</p>
-                </div>
-            `;
-        };
-
-        const getTransactionRow = (t) => {
-            const amount = Number(t.amount || 0);
-            const isNegative = amount < 0;
-            const fromMe = t.from_role === currentUser.email;
-            let text = '';
-            if (isNegative) text = `${fromMe ? 'Tu' : ownerLabel(t.from_role)} a scos din`;
-            else if (t.from_role === t.to_role) text = `${fromMe ? 'Tu' : ownerLabel(t.from_role)} a pus la`;
-            else text = `${fromMe ? 'Tu' : ownerLabel(t.from_role)} a oferit la`;
-            return `
-                <div class="flex justify-between items-center p-3 bg-slate-50 dark:bg-slate-700/50 rounded-xl">
-                    <div class="pr-3">
-                        <p class="font-medium text-slate-700 dark:text-slate-200 text-sm">${text} <span class="font-bold">„${t.goal_title}”</span></p>
-                        <p class="text-xs text-slate-400">${new Date(t.timestamp).toLocaleTimeString('ro-RO', {hour: '2-digit', minute:'2-digit'})}</p>
-                    </div>
-                    <span class="font-bold ${isNegative ? 'text-red-500' : 'text-green-500'} text-sm whitespace-nowrap">${isNegative ? '' : '+'}${money(amount)}</span>
-                </div>
-            `;
-        };
-
-        const getPartnerProfileHTML = () => {
-            const partnerEmail = getPartnerEmail();
-            const partnerRole = partnerEmail ? getRole(partnerEmail) : (getRole(currentUser.email) === 'sot' ? 'sotie' : 'sot');
-            const partnerRoleName = roleLabel(partnerRole);
-            const partnerGoals = goals.filter(g => g.owner !== currentUser.email);
-            const inProgress = partnerGoals.filter(g => Number(g.current || 0) < Number(g.target || 0));
-            const completed = partnerGoals.filter(g => Number(g.current || 0) >= Number(g.target || 0));
-            const totalOferit = transactions.filter(t => t.from_role === currentUser.email && t.to_role !== currentUser.email).reduce((sum, t) => sum + Math.max(0, Number(t.amount || 0)), 0);
-
-            return `
-                <div class="fade-in max-w-sm mx-auto mt-2">
-                    <button onclick="window.appActions.switchTab('home')" class="mb-6 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white transition-colors flex items-center gap-2 font-medium bg-slate-100 dark:bg-slate-800 px-4 py-2 rounded-full w-max">
-                        <i class="fas fa-arrow-left"></i> Acasă
-                    </button>
-                    <div class="${accentBgSoft(partnerRole)} rounded-3xl p-6 shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col items-center mb-6 relative">
-                        ${getAvatarHtml(24, partnerEmail)}
-                        <h2 class="font-bold text-2xl text-slate-800 dark:text-white mt-4 mb-1">${partnerRoleName}</h2>
-                        <p class="text-xs text-slate-500 dark:text-slate-400 mb-3">${partnerEmail || 'Profil partener'}</p>
-                        <div class="bg-white dark:bg-slate-800 px-4 py-2 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm">
-                            <p class="text-xs text-slate-500 dark:text-slate-400 font-medium uppercase text-center mb-1">Total dăruit de tine</p>
-                            <p class="font-black text-xl ${accentText(partnerRole)} text-center">${money(totalOferit)} RON</p>
-                        </div>
-                    </div>
-                    ${getGoalSection('Obiective în curs', inProgress, false)}
-                    ${getGoalSection('Obiective finalizate', completed, false)}
-                </div>
-            `;
-        };
-
-        const getGoalSection = (title, list, isMine) => `
-            <div class="mb-5">
-                <div class="flex items-center justify-between mb-3 px-1">
-                    <h3 class="font-bold text-lg text-slate-800 dark:text-white">${title}</h3>
-                    <span class="bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-bold px-2 py-1 rounded-lg">${list.length}</span>
-                </div>
-                <div class="space-y-3">
-                    ${list.length === 0 ? `<div class="bg-white dark:bg-slate-800 p-5 rounded-2xl text-center border border-slate-100 dark:border-slate-700"><p class="text-sm text-slate-400">Nimic aici momentan.</p></div>` : list.map(g => generateGoalCard(g, isMine)).join('')}
-                </div>
+    function goalCard(goal, isMine) {
+      const current = Number(goal.current || 0);
+      const target = Number(goal.target || 1);
+      const percent = Math.min(100, Math.round((current / target) * 100));
+      const done = percent >= 100;
+      return `
+        <div class="goal-card" onclick="window.appActions.openStats('${goal.id}')">
+          <div class="flex items-start justify-between gap-3 mb-3">
+            <div class="min-w-0">
+              <div class="flex items-center gap-2">
+                <p class="goal-title truncate">${escapeHTML(goal.title)}</p>
+                ${done ? '<span class="badge">COMPLET</span>' : ''}
+              </div>
+              <p class="goal-owner">${ownerLabel(goal.owner)}</p>
             </div>
-        `;
+            <p class="goal-money">${money(current)} <span class="muted">/ ${money(target)}</span></p>
+          </div>
+          <div class="progress ${goal.owner !== currentUser.email ? 'partner' : ''} ${done ? 'done' : ''}"><span style="width:${percent}%"></span></div>
+          <div class="flex items-center justify-between mt-3">
+            <span class="text-xs muted">${percent}%</span>
+            <div class="flex gap-2">
+              ${isMine ? `<button class="btn btn-gold" onclick="event.stopPropagation(); window.appActions.openMoney('${goal.id}','add')">Pune</button><button class="btn btn-soft" onclick="event.stopPropagation(); window.appActions.openMoney('${goal.id}','remove')">Scoate</button>` : (!done ? `<button class="btn btn-gold" onclick="event.stopPropagation(); window.appActions.openMoney('${goal.id}','gift')">Oferă</button>` : '')}
+            </div>
+          </div>
+        </div>`;
+    }
 
-        const getProfileHTML = () => {
-            const isDark = document.documentElement.classList.contains('dark');
-            const myRole = getRole(currentUser.email);
-            const myRoleName = roleLabel(myRole);
-            return `
-                <div class="fade-in max-w-sm mx-auto mt-4">
-                    <h2 class="font-bold text-2xl text-slate-800 dark:text-white mb-6 text-center">Setări Profil</h2>
-                    <div class="bg-white dark:bg-slate-800 rounded-3xl p-6 shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col items-center mb-6 relative">
-                        <label class="cursor-pointer relative group">
-                            ${getAvatarHtml(24, currentUser.email)}
-                            <div class="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                <i class="fas fa-camera text-white"></i>
-                            </div>
-                            <input type="file" accept="image/*" class="hidden" onchange="window.appActions.uploadAvatar(event)">
-                        </label>
-                        <h3 class="mt-4 font-bold text-lg dark:text-white">${myRoleName}</h3>
-                        <p class="text-sm text-slate-500 dark:text-slate-400">${currentUser.email}</p>
-                    </div>
-                    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden mb-6">
-                        <div class="flex items-center justify-between p-4 border-b border-slate-100 dark:border-slate-700">
-                            <div class="flex items-center gap-3 text-slate-700 dark:text-slate-200">
-                                <div class="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center"><i class="fas fa-moon"></i></div>
-                                <span class="font-medium">Mod Întunecat</span>
-                            </div>
-                            <label class="relative inline-flex items-center cursor-pointer">
-                                <input type="checkbox" onchange="window.appActions.toggleTheme()" class="sr-only peer" ${isDark ? 'checked' : ''}>
-                                <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-indigo-600"></div>
-                            </label>
-                        </div>
-                        <div class="p-4 text-sm text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/50">
-                            <p class="font-semibold mb-1 text-slate-700 dark:text-slate-300"><i class="fas fa-info-circle mr-1"></i> Despre Aplicație</p>
-                            <p>Datele se sincronizează prin Supabase. Pozele de profil, calculatorul și statisticile rămân salvate pe cont.</p>
-                        </div>
-                    </div>
-                    <button onclick="window.appActions.logout()" class="w-full bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 font-bold py-4 rounded-2xl transition-colors flex items-center justify-center gap-2">
-                        <i class="fas fa-sign-out-alt"></i> Deconectare
-                    </button>
-                </div>
-            `;
+    function calendarHTML() {
+      const days = [-1,0,1].map(n => addDays(selectedDate, n));
+      return `
+        <div class="calendar-card" onpointerdown="window.appActions.swipeStart(event)" onpointerup="window.appActions.swipeEnd(event)" onpointercancel="window.appActions.swipeCancel()">
+          <div class="flex items-center justify-between mb-2">
+            <button class="btn btn-soft" onclick="window.appActions.shiftDate(-1)">${svg.back}</button>
+            <p class="text-sm muted capitalize">${formatFullDate(selectedDate)}</p>
+            <button class="btn btn-soft" onclick="window.appActions.shiftDate(1)" style="transform:rotate(180deg)">${svg.back}</button>
+          </div>
+          <div class="flex gap-2">
+            ${days.map((d, i) => {
+              const date = new Date(d + 'T12:00:00');
+              const labels = ['Ieri', 'Azi', 'Mâine'];
+              return `<button class="day-pill ${d === selectedDate ? 'active' : ''}" onclick="window.appActions.setDate('${d}')"><span class="day-label">${labels[i]}</span><span class="day-number">${date.getDate()}</span></button>`;
+            }).join('')}
+          </div>
+        </div>`;
+    }
+
+    function partnerHTML() {
+      const pEmail = partnerEmail();
+      const pRole = pEmail ? getRole(pEmail) : (getRole(currentUser.email) === 'sot' ? 'sotie' : 'sot');
+      const list = goals.filter(g => g.owner !== currentUser.email);
+      const active = list.filter(g => Number(g.current || 0) < Number(g.target || 0));
+      const done = list.filter(g => Number(g.current || 0) >= Number(g.target || 0));
+      return `
+        ${backButton()}
+        <div class="top-card text-center">
+          <div class="mx-auto mb-3" style="width:max-content">${avatarHTML(pEmail, true)}</div>
+          <h2 class="text-2xl font-medium">${roleLabel(pRole)}</h2>
+          <p class="text-xs muted mt-1">${pEmail || 'Profil partener'}</p>
+        </div>
+        <div class="section"><div class="section-head"><span>Obiective în curs</span><small>${active.length}</small></div><div class="space-y-3">${active.length ? active.map(g => goalCard(g,false)).join('') : emptyHTML('Nimic aici momentan.')}</div></div>
+        <div class="section"><div class="section-head"><span>Obiective finalizate</span><small>${done.length}</small></div><div class="space-y-3">${done.length ? done.map(g => goalCard(g,false)).join('') : emptyHTML('Nimic aici momentan.')}</div></div>`;
+    }
+
+    function profileHTML() {
+      const role = getRole(currentUser.email);
+      return `
+        <div class="text-center mb-5">
+          <div class="mx-auto mb-3" style="width:max-content">
+            <label style="position:relative; display:block; cursor:pointer;">
+              ${avatarHTML(currentUser.email, true)}
+              <span class="icon-btn" style="position:absolute; right:-8px; bottom:-8px; width:34px; height:34px; border-radius:14px;">${svg.camera}</span>
+              <input type="file" accept="image/*" style="display:none" onchange="window.appActions.uploadAvatar(event)">
+            </label>
+          </div>
+          <h2 class="text-2xl font-medium">${roleLabel(role)}</h2>
+          <p class="text-xs muted">${currentUser.email}</p>
+        </div>
+        <div class="card flex items-center justify-between mb-3">
+          <div class="flex items-center gap-3"><span class="icon-btn">${svg.moon}</span><span class="text-sm">Mod întunecat</span></div>
+          <button class="btn btn-gold" onclick="window.appActions.toggleTheme()">Schimbă</button>
+        </div>
+        <div class="card mb-3"><p class="text-sm muted">Datele se salvează pe contul vostru și se sincronizează între telefoane prin Supabase.</p></div>
+        <button class="btn btn-danger btn-full flex items-center justify-center gap-2" onclick="window.appActions.logout()">${svg.logOut} Deconectare</button>`;
+    }
+
+    function calculatorHTML() {
+      const keys = ['7','8','9','÷','4','5','6','×','1','2','3','-','0','.','C','+'];
+      return `
+        ${backButton()}
+        <div class="top-card mb-4"><p class="muted text-xs">Calculator</p><div class="text-[30px] min-h-[38px] font-medium break-all">${calcResult}</div><p class="muted text-sm break-all">${calcExpression || '0'}</p></div>
+        <div class="calc-grid mb-4">${keys.map(k => `<button class="calc-key ${['÷','×','-','+'].includes(k) ? 'op' : k==='C' ? 'clear' : ''}" onclick="window.appActions.calcPress('${k}')">${k}</button>`).join('')}</div>
+        <div class="grid grid-cols-2 gap-2 mb-4"><button class="btn btn-soft btn-full" onclick="window.appActions.calcBack()">Șterge</button><button class="btn btn-gold btn-full" onclick="window.appActions.calcEquals()">=</button></div>
+        <div class="card mb-4"><p class="label">Notiță</p><textarea id="calcNoteInput" class="input" rows="2" placeholder="Pentru ce e calculul?"></textarea><button id="saveCalcBtn" class="btn btn-gold btn-full mt-3" onclick="window.appActions.saveCalc()">Salvează Calcul</button></div>
+        <div class="section"><div class="section-head"><span>Calcule salvate</span><small>${calculatorHistory.length}</small></div><div class="space-y-2">${calculatorHistory.length ? calculatorHistory.map(c => `<div class="card"><p class="text-sm">${escapeHTML(c.expression)} = ${escapeHTML(c.result)}</p>${c.note ? `<p class="text-xs muted mt-1">${escapeHTML(c.note)}</p>` : ''}</div>`).join('') : emptyHTML('Nu ai calcule salvate.')}</div></div>`;
+    }
+
+    function statsHTML() {
+      const goal = goals.find(g => g.id === selectedGoalId);
+      if (!goal) return `${backButton()}${emptyHTML('Obiectivul nu mai există.')}`;
+      const list = transactions.filter(t => t.goal_id === goal.id);
+      const added = list.filter(t => Number(t.amount) > 0).reduce((s,t) => s + Number(t.amount), 0);
+      const removed = list.filter(t => Number(t.amount) < 0).reduce((s,t) => s + Math.abs(Number(t.amount)), 0);
+      const current = Number(goal.current || 0), target = Number(goal.target || 1);
+      const percent = Math.min(100, Math.round((current / target) * 100));
+      const byDate = {};
+      list.forEach(t => { const d = String(t.date).slice(0,10); (byDate[d] ||= []).push(t); });
+      const dates = Object.keys(byDate).sort((a,b) => b.localeCompare(a));
+      return `
+        ${backButton()}
+        <div class="top-card mb-4"><p class="muted text-xs">Statistici</p><h2 class="text-2xl font-medium tracking-[-.03em]">${escapeHTML(goal.title)}</h2><p class="muted text-sm mt-1">${money(current)} din ${money(target)} RON</p><div class="progress mt-4 ${percent>=100?'done':''}"><span style="width:${percent}%"></span></div></div>
+        <div class="stat-grid mb-4"><div class="stat-mini"><span>Pus</span><b>${money(added)}</b></div><div class="stat-mini"><span>Scos</span><b>${money(removed)}</b></div><div class="stat-mini"><span>Mișcări</span><b>${list.length}</b></div></div>
+        <div class="section"><div class="section-head"><span>Pe zile</span></div><div class="space-y-3">${dates.length ? dates.map(d => `<div class="card"><div class="flex justify-between mb-2"><span class="text-sm capitalize">${formatFullDate(d)}</span><span class="text-sm muted">${byDate[d].length}</span></div><div class="space-y-2">${byDate[d].map(transactionRow).join('')}</div></div>`).join('') : emptyHTML('Nu există încă statistici.')}</div></div>`;
+    }
+
+    function transactionRow(t) {
+      const amount = Number(t.amount || 0);
+      const color = amount < 0 ? 'var(--danger)' : 'var(--success)';
+      const text = amount < 0 ? 'S-a scos din' : (t.from_role === t.to_role ? 'S-a pus la' : 'S-a oferit la');
+      return `<div class="card" style="padding:11px 12px"><div class="flex items-center justify-between gap-3"><p class="text-xs muted">${text} <span style="color:var(--text)">${escapeHTML(t.goal_title || '')}</span></p><p class="text-xs" style="color:${color}; white-space:nowrap;">${amount > 0 ? '+' : ''}${money(amount)}</p></div></div>`;
+    }
+
+    function bottomNavHTML() {
+      return `<nav class="bottom-nav"><button class="nav-item ${currentPage==='home'?'active':''}" onclick="window.appActions.switchPage('home')">${svg.home}<span>Acasă</span></button><button class="nav-plus" onclick="window.appActions.openAddGoal()">${svg.plus}</button><button class="nav-item ${currentPage==='profile'?'active':''}" onclick="window.appActions.switchPage('profile')">${svg.user}<span>Profil</span></button></nav>`;
+    }
+
+    function backButton() { return `<button class="btn btn-soft mb-4 flex items-center gap-2" onclick="window.appActions.goBack()">${svg.back} Înapoi</button>`; }
+    function emptyHTML(text) { return `<div class="card text-center"><p class="text-sm muted">${text}</p></div>`; }
+    function escapeHTML(v) { return String(v ?? '').replace(/[&<>'"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#039;','"':'&quot;'}[m])); }
+
+    function showConfetti() {
+      const root = document.getElementById('confettiRoot');
+      const colors = ['#d6b15d','#f0d98b','#aeb2ba','#61c487'];
+      for (let i=0;i<36;i++) {
+        const p = document.createElement('div');
+        p.className = 'confetti-piece';
+        p.style.left = Math.random()*100 + 'vw';
+        p.style.background = colors[Math.floor(Math.random()*colors.length)];
+        p.style.animationDelay = Math.random()*0.25 + 's';
+        root.appendChild(p);
+        setTimeout(() => p.remove(), 1700);
+      }
+    }
+
+    window.appActions = {
+      toggleAuthMode: authHTML,
+      selectRole(role) {
+        window.selectedSignupRole = role;
+        const a = document.getElementById('roleSot');
+        const b = document.getElementById('roleSotie');
+        if (!a || !b) return;
+        a.className = role === 'sot' ? 'btn btn-gold' : 'btn btn-soft';
+        b.className = role === 'sotie' ? 'btn btn-gold' : 'btn btn-soft';
+      },
+      async handleAuth(isLogin) {
+        const email = document.getElementById('emailInput').value.trim();
+        const password = document.getElementById('passInput').value;
+        const keep = document.getElementById('keepLoggedInput')?.checked !== false;
+        const btn = document.getElementById('authBtn');
+        if (!email || !password) return alert('Completează emailul și parola.');
+        btn.textContent = 'Se procesează...'; btn.disabled = true;
+        try {
+          let result;
+          if (isLogin) result = await supabase.auth.signInWithPassword({ email, password });
+          else result = await supabase.auth.signUp({ email, password, options: { data: { role: window.selectedSignupRole } } });
+          if (result.error) throw result.error;
+          localStorage.setItem('keepLogged', keep ? '1' : '0');
+          currentUser = result.data.user || result.data.session?.user;
+          if (!currentUser) {
+            const { data } = await supabase.auth.getSession();
+            currentUser = data.session?.user || null;
+          }
+          if (!currentUser) throw new Error('Cont creat, dar sesiunea nu este activă. Încearcă să te conectezi.');
+          await ensureOwnProfile();
+          await fetchData();
+          setupRealtime();
+        } catch (e) {
+          alert('Eroare: ' + (e.message || e));
+          btn.textContent = isLogin ? 'Conectare' : 'Creează cont'; btn.disabled = false;
+        }
+      },
+      switchPage(page) { previousPage = currentPage; currentPage = page; renderApp(); },
+      goBack() { currentPage = previousPage && previousPage !== currentPage ? previousPage : 'home'; renderApp(); },
+      openCalculator() { previousPage = currentPage; currentPage = 'calculator'; renderApp(); },
+      openStats(id) { selectedGoalId = id; previousPage = currentPage; currentPage = 'goalStats'; renderApp(); },
+      setDate(d) { selectedDate = d; renderApp(); },
+      shiftDate(n) { selectedDate = addDays(selectedDate, n); renderApp(); },
+      swipeStart(e) { if (e.target.closest('button')) return; swipeStartX = e.clientX; swipeMoved = true; },
+      swipeEnd(e) { if (!swipeMoved) return; const diff = e.clientX - swipeStartX; swipeMoved = false; if (Math.abs(diff) > 45) this.shiftDate(diff < 0 ? 1 : -1); },
+      swipeCancel() { swipeMoved = false; },
+      openAddGoal() {
+        modal.innerHTML = `<div class="modal-backdrop"><div class="sheet"><div class="grab"></div><h3 class="text-xl font-medium mb-4">Adaugă obiectiv</h3><div class="space-y-3"><div><p class="label">Titlu</p><input id="goalTitleInput" class="input" placeholder="Vacanță"></div><div><p class="label">Suma necesară</p><input id="goalTargetInput" type="number" class="input" placeholder="1000"></div><div class="grid grid-cols-2 gap-2 pt-2"><button class="btn btn-soft btn-full" onclick="window.appActions.closeModal()">Anulează</button><button id="saveGoalBtn" class="btn btn-gold btn-full" onclick="window.appActions.saveGoal()">Salvează</button></div></div></div></div>`;
+      },
+      closeModal() { modal.innerHTML = ''; },
+      async saveGoal() {
+        const title = document.getElementById('goalTitleInput').value.trim();
+        const target = parseFloat(document.getElementById('goalTargetInput').value);
+        if (!title || !target || target <= 0) return alert('Date invalide.');
+        const btn = document.getElementById('saveGoalBtn'); btn.textContent = 'Salvez...'; btn.disabled = true;
+        const { data, error } = await supabase.from('goals').insert([{ title, target, current:0, owner: currentUser.email }]).select().single();
+        if (error) { alert(error.message); btn.textContent = 'Salvează'; btn.disabled = false; return; }
+        if (data) goals.unshift(data);
+        this.closeModal(); renderApp(); scheduleSoftRefresh();
+      },
+      openMoney(id, mode) {
+        const g = goals.find(x => x.id === id); if (!g) return;
+        const title = mode === 'remove' ? 'Scoate bani' : mode === 'gift' ? 'Oferă bani' : 'Pune bani';
+        const action = mode === 'remove' ? 'Scoate' : mode === 'gift' ? 'Oferă' : 'Pune';
+        modal.innerHTML = `<div class="modal-backdrop"><div class="sheet"><div class="grab"></div><h3 class="text-xl font-medium mb-1">${title}</h3><p class="text-sm muted mb-4">${escapeHTML(g.title)}</p><div class="space-y-3"><input id="moneyAmountInput" type="number" class="input" placeholder="RON"><div class="grid grid-cols-2 gap-2 pt-2"><button class="btn btn-soft btn-full" onclick="window.appActions.closeModal()">Anulează</button><button id="moneyBtn" class="btn btn-gold btn-full" onclick="window.appActions.applyMoney('${id}','${mode}')">${action}</button></div></div></div></div>`;
+      },
+      async applyMoney(id, mode) {
+        const amountRaw = parseFloat(document.getElementById('moneyAmountInput').value);
+        const g = goals.find(x => x.id === id);
+        if (!g || !amountRaw || amountRaw <= 0) return alert('Sumă invalidă.');
+        if (mode === 'remove' && g.owner !== currentUser.email) return alert('Poți scoate doar din obiectivul tău.');
+        if (mode === 'remove' && amountRaw > Number(g.current || 0)) return alert('Nu poți scoate mai mult decât există.');
+        const old = Number(g.current || 0);
+        const delta = mode === 'remove' ? -amountRaw : amountRaw;
+        let next = Math.max(0, old + delta);
+        const btn = document.getElementById('moneyBtn'); btn.textContent = 'Salvez...'; btn.disabled = true;
+        const rpc = await supabase.rpc('adjust_goal_amount', { p_goal_id: id, p_delta: delta });
+        if (rpc.error) {
+          const upd = await supabase.from('goals').update({ current: next }).eq('id', id);
+          if (upd.error) { alert(upd.error.message); this.closeModal(); return; }
+        } else if (rpc.data !== null && rpc.data !== undefined) next = Number(rpc.data);
+        await supabase.from('transactions').insert([{ goal_id:id, goal_title:g.title, amount:delta, from_role:currentUser.email, to_role:g.owner, date:todayISO(), timestamp:new Date().toISOString() }]);
+        g.current = next;
+        this.closeModal(); renderApp();
+        if (old < Number(g.target || 0) && next >= Number(g.target || 0)) showConfetti();
+        scheduleSoftRefresh();
+      },
+      async uploadAvatar(e) {
+        const file = e.target.files[0]; if (!file) return;
+        if (file.size > 900000) return alert('Alege o poză mai mică.');
+        const reader = new FileReader();
+        reader.onload = async ev => {
+          const avatar = ev.target.result;
+          const role = getRole(currentUser.email);
+          const { error } = await supabase.from('profiles').upsert({ id:currentUser.id, email:currentUser.email, role, avatar }, { onConflict:'id' });
+          if (error) return alert(error.message);
+          const p = getProfile(currentUser.email); if (p) p.avatar = avatar; else profiles.push({ id:currentUser.id, email:currentUser.email, role, avatar });
+          renderApp();
         };
+        reader.readAsDataURL(file);
+      },
+      toggleTheme() { document.body.classList.toggle('light-mode'); },
+      async logout() { await supabase.auth.signOut(); localStorage.removeItem('keepLogged'); currentUser = null; authHTML(true); },
+      calcPress(v) { if (v === 'C') { calcExpression=''; calcResult='0'; renderApp(); return; } calcExpression += v === '×' ? '*' : v === '÷' ? '/' : v; renderApp(); },
+      calcBack() { calcExpression = calcExpression.slice(0,-1); renderApp(); },
+      calcEquals() { try { if (!/^[0-9+\-*/().\s]+$/.test(calcExpression)) throw new Error(); const r = Function('"use strict";return ('+calcExpression+')')(); calcResult = Number.isFinite(Number(r)) ? String(Math.round(Number(r)*100)/100) : 'Eroare'; } catch { calcResult='Eroare'; } renderApp(); },
+      async saveCalc() { if (!calcExpression || calcResult === '0' || calcResult === 'Eroare') return alert('Fă întâi un calcul valid.'); const note = document.getElementById('calcNoteInput')?.value.trim() || ''; const { error } = await supabase.from('calculator_history').insert([{ user_email:currentUser.email, expression:calcExpression, result:calcResult, note }]); if (error) return alert(error.message); await fetchData({ soft:true }); }
+    };
 
-        const getCalculatorHTML = () => {
-            const buttons = ['7','8','9','÷','4','5','6','×','1','2','3','-','0','.','C','+'];
-            return `
-                <div class="fade-in max-w-sm mx-auto mt-2">
-                    <button onclick="window.appActions.goBack()" class="mb-5 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white transition-colors flex items-center gap-2 font-medium bg-slate-100 dark:bg-slate-800 px-4 py-2 rounded-full w-max">
-                        <i class="fas fa-arrow-left"></i> Înapoi
-                    </button>
-                    <div class="bg-white dark:bg-slate-800 rounded-3xl p-5 shadow-sm border border-slate-100 dark:border-slate-700 mb-5">
-                        <div class="flex items-center gap-3 mb-4">
-                            <div class="w-11 h-11 rounded-2xl bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 flex items-center justify-center"><i class="fas fa-calculator"></i></div>
-                            <div>
-                                <h2 class="font-bold text-2xl text-slate-800 dark:text-white">Calculator</h2>
-                                <p class="text-xs text-slate-400">fără tastatura telefonului</p>
-                            </div>
-                        </div>
-                        <div class="bg-slate-50 dark:bg-slate-900 rounded-2xl p-4 mb-4 text-right min-h-[92px] border border-slate-100 dark:border-slate-700">
-                            <p class="text-sm text-slate-400 break-all min-h-[20px]">${calcExpression || '0'}</p>
-                            <p class="text-3xl font-black text-slate-800 dark:text-white break-all">${calcResult}</p>
-                        </div>
-                        <div class="grid grid-cols-4 gap-2 mb-3">
-                            ${buttons.map(b => `<button onclick="window.appActions.calcPress('${b}')" class="py-4 rounded-2xl font-bold ${['÷','×','-','+'].includes(b) ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400' : b === 'C' ? 'bg-red-50 dark:bg-red-900/20 text-red-500' : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-100'}">${b}</button>`).join('')}
-                        </div>
-                        <div class="grid grid-cols-2 gap-2">
-                            <button onclick="window.appActions.calcBackspace()" class="py-3 rounded-2xl font-bold bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-200">Șterge</button>
-                            <button onclick="window.appActions.calcEquals()" class="py-3 rounded-2xl font-bold bg-green-500 hover:bg-green-600 text-white">=</button>
-                        </div>
-                    </div>
-                    <div class="bg-white dark:bg-slate-800 rounded-3xl p-5 shadow-sm border border-slate-100 dark:border-slate-700 mb-5">
-                        <h3 class="font-bold text-lg mb-3 text-slate-800 dark:text-white">Salvează calcul</h3>
-                        <textarea id="calcNoteInput" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl outline-none dark:text-white text-sm mb-3" rows="2" placeholder="Adaugă o notiță..."></textarea>
-                        <button onclick="window.appActions.saveCalculation()" id="saveCalcBtn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl">Salvează Calcul</button>
-                    </div>
-                    <div class="mb-6">
-                        <h3 class="font-bold text-lg mb-3 text-slate-800 dark:text-white">Calcule salvate</h3>
-                        <div class="space-y-3">
-                            ${calculatorHistory.length === 0 ? `<p class="text-center text-slate-400 text-sm py-4">Nu ai calcule salvate.</p>` : calculatorHistory.map(c => `
-                                <div class="bg-white dark:bg-slate-800 rounded-2xl p-4 border border-slate-100 dark:border-slate-700 shadow-sm">
-                                    <div class="flex justify-between gap-3">
-                                        <div>
-                                            <p class="font-bold text-slate-800 dark:text-white">${c.expression} = ${c.result}</p>
-                                            ${c.note ? `<p class="text-sm text-slate-500 dark:text-slate-400 mt-1">${c.note}</p>` : ''}
-                                        </div>
-                                        <span class="text-[10px] text-slate-400 whitespace-nowrap">${new Date(c.created_at).toLocaleDateString('ro-RO')}</span>
-                                    </div>
-                                </div>
-                            `).join('')}
-                        </div>
-                    </div>
-                </div>
-            `;
-        };
-
-        const getGoalStatsHTML = () => {
-            const goal = goals.find(g => g.id === selectedGoalId);
-            if (!goal) return `<div><button onclick="window.appActions.goBack()" class="mb-5 bg-slate-100 dark:bg-slate-800 px-4 py-2 rounded-full"><i class="fas fa-arrow-left mr-2"></i>Înapoi</button><p>Obiectivul nu mai există.</p></div>`;
-            const goalTrans = transactions.filter(t => t.goal_id === goal.id);
-            const added = goalTrans.filter(t => Number(t.amount) > 0).reduce((s, t) => s + Number(t.amount), 0);
-            const removed = goalTrans.filter(t => Number(t.amount) < 0).reduce((s, t) => s + Math.abs(Number(t.amount)), 0);
-            const percent = Math.min(100, Math.round((Number(goal.current || 0) / Number(goal.target || 1)) * 100));
-            const grouped = {};
-            goalTrans.forEach(t => {
-                const d = String(t.date).slice(0, 10);
-                if (!grouped[d]) grouped[d] = [];
-                grouped[d].push(t);
-            });
-            const dates = Object.keys(grouped).sort((a, b) => b.localeCompare(a));
-            return `
-                <div class="fade-in max-w-sm mx-auto mt-2">
-                    <button onclick="window.appActions.goBack()" class="mb-5 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white transition-colors flex items-center gap-2 font-medium bg-slate-100 dark:bg-slate-800 px-4 py-2 rounded-full w-max">
-                        <i class="fas fa-arrow-left"></i> Înapoi
-                    </button>
-                    <div class="bg-white dark:bg-slate-800 rounded-3xl p-5 shadow-sm border border-slate-100 dark:border-slate-700 mb-5">
-                        <p class="text-xs text-slate-400 mb-1">Statistici obiectiv</p>
-                        <h2 class="font-black text-2xl text-slate-800 dark:text-white mb-4">${goal.title}</h2>
-                        <div class="flex justify-between text-sm mb-2">
-                            <span class="font-bold text-slate-700 dark:text-slate-200">${money(goal.current)} RON</span>
-                            <span class="text-slate-400">din ${money(goal.target)} RON</span>
-                        </div>
-                        <div class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-3 mb-2">
-                            <div class="${accentBar(getRole(goal.owner))} h-3 rounded-full transition-all duration-500" style="width:${percent}%"></div>
-                        </div>
-                        <p class="text-right text-xs font-bold text-slate-500">${percent}%</p>
-                    </div>
-                    <div class="grid grid-cols-3 gap-3 mb-5">
-                        <div class="bg-white dark:bg-slate-800 rounded-2xl p-3 border border-slate-100 dark:border-slate-700 text-center">
-                            <p class="text-xs text-slate-400">Pus</p><p class="font-black text-green-500">${money(added)}</p>
-                        </div>
-                        <div class="bg-white dark:bg-slate-800 rounded-2xl p-3 border border-slate-100 dark:border-slate-700 text-center">
-                            <p class="text-xs text-slate-400">Scos</p><p class="font-black text-red-500">${money(removed)}</p>
-                        </div>
-                        <div class="bg-white dark:bg-slate-800 rounded-2xl p-3 border border-slate-100 dark:border-slate-700 text-center">
-                            <p class="text-xs text-slate-400">Mișcări</p><p class="font-black text-slate-800 dark:text-white">${goalTrans.length}</p>
-                        </div>
-                    </div>
-                    <h3 class="font-bold text-lg mb-3 text-slate-800 dark:text-white">Pe zile</h3>
-                    <div class="space-y-3 mb-6">
-                        ${dates.length === 0 ? `<p class="text-center text-slate-400 py-4 text-sm">Nu există încă statistici.</p>` : dates.map(d => {
-                            const list = grouped[d];
-                            const total = list.reduce((s, t) => s + Number(t.amount || 0), 0);
-                            return `
-                                <div class="bg-white dark:bg-slate-800 rounded-2xl p-4 border border-slate-100 dark:border-slate-700 shadow-sm">
-                                    <div class="flex justify-between items-center mb-2">
-                                        <p class="font-bold text-slate-800 dark:text-white capitalize">${formatFullDate(d)}</p>
-                                        <p class="font-black ${total < 0 ? 'text-red-500' : 'text-green-500'}">${total >= 0 ? '+' : ''}${money(total)}</p>
-                                    </div>
-                                    <div class="space-y-2">
-                                        ${list.map(t => getTransactionRow(t)).join('')}
-                                    </div>
-                                </div>
-                            `;
-                        }).join('')}
-                    </div>
-                </div>
-            `;
-        };
-
-        const getBottomNavHTML = () => {
-            const isHome = currentTab === 'home';
-            const isProfile = currentTab === 'profile';
-            return `
-                <nav class="fixed bottom-0 w-full max-w-md mx-auto bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 flex justify-around items-center h-16 pb-safe z-40 rounded-t-2xl shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
-                    <button onclick="window.appActions.switchTab('home')" class="flex flex-col items-center justify-center w-20 h-full ${isHome ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'} transition-colors">
-                        <i class="fas fa-home text-xl mb-1"></i><span class="text-[10px] font-semibold">Acasă</span>
-                    </button>
-                    <div class="relative -top-6">
-                        <button onclick="window.appActions.openAddGoalModal()" class="w-14 h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full flex items-center justify-center text-2xl shadow-lg shadow-indigo-200 dark:shadow-none transition-transform hover:scale-105">
-                            <i class="fas fa-plus"></i>
-                        </button>
-                    </div>
-                    <button onclick="window.appActions.switchTab('profile')" class="flex flex-col items-center justify-center w-20 h-full ${isProfile ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'} transition-colors">
-                        <i class="fas fa-user text-xl mb-1"></i><span class="text-[10px] font-semibold">Profil</span>
-                    </button>
-                </nav>
-            `;
-        };
-
-        const getAvatarHtml = (sizeStr, email = currentUser?.email) => {
-            const profile = email ? getProfile(email) : null;
-            const avatarBase64 = profile?.avatar;
-            if (avatarBase64) {
-                return `<img src="${avatarBase64}" class="w-${sizeStr} h-${sizeStr} rounded-full object-cover border-2 border-slate-200 dark:border-slate-600 shadow-sm" alt="Avatar">`;
-            }
-            const initial = email ? email.charAt(0).toUpperCase() : '?';
-            const role = email ? getRole(email) : 'sot';
-            return `<div class="w-${sizeStr} h-${sizeStr} rounded-full ${role === 'sotie' ? 'bg-gradient-to-tr from-red-400 to-red-600' : 'bg-gradient-to-tr from-indigo-500 to-purple-500'} text-white flex items-center justify-center text-${sizeStr > 16 ? '3xl' : 'lg'} font-bold shadow-sm">${initial}</div>`;
-        };
-
-        const generateGoalCard = (goal, isMine) => {
-            const role = getRole(goal.owner);
-            const target = Number(goal.target || 1);
-            const current = Number(goal.current || 0);
-            const percent = Math.min(100, Math.round((current / target) * 100));
-            const isCompleted = percent >= 100;
-            const btnClass = accentButton(role);
-            const roleName = ownerLabel(goal.owner);
-            const isWife = role === 'sotie';
-            const chipClass = isWife ? 'bg-red-50 text-red-600 dark:bg-red-900/25 dark:text-red-300' : 'bg-indigo-50 text-indigo-600 dark:bg-indigo-900/25 dark:text-indigo-300';
-            const glowClass = isWife ? 'from-red-500/10 via-transparent to-transparent' : 'from-indigo-500/10 via-transparent to-transparent';
-            return `
-                <div onclick="window.appActions.openGoalStats('${goal.id}')" class="goal-card glass-card bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-[28px] p-4 relative overflow-hidden cursor-pointer shadow-sm">
-                    <div class="absolute inset-x-0 top-0 h-24 bg-gradient-to-b ${glowClass} pointer-events-none"></div>
-                    ${isCompleted ? `<div class="absolute top-3 right-3 bg-green-500 text-white text-[8px] font-black px-2 py-1 rounded-full leading-none shadow-sm">COMPLET</div>` : ''}
-                    <div class="relative flex items-start justify-between gap-3 mb-4 ${isCompleted ? 'pr-16' : ''}">
-                        <div class="min-w-0">
-                            <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-black ${chipClass}">${roleName}</span>
-                            <h4 class="font-black text-slate-900 dark:text-white text-base leading-tight mt-2 truncate">${goal.title}</h4>
-                        </div>
-                        <div class="text-right shrink-0">
-                            <p class="text-lg font-black text-slate-900 dark:text-white leading-none">${money(current)}</p>
-                            <p class="text-[11px] text-slate-400 mt-1">din ${money(target)} RON</p>
-                        </div>
-                    </div>
-                    <div class="relative mb-4">
-                        <div class="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-3 overflow-hidden">
-                            <div class="${isCompleted ? 'bg-green-500' : accentBar(role)} h-3 rounded-full transition-all duration-700" style="width: ${percent}%"></div>
-                        </div>
-                        <div class="flex justify-between mt-2">
-                            <span class="text-xs font-bold text-slate-400">Progres</span>
-                            <span class="text-xs font-black text-slate-700 dark:text-slate-200">${percent}%</span>
-                        </div>
-                    </div>
-                    <div class="relative flex justify-end items-center gap-2">
-                        ${isMine ? `
-                            <button onclick="event.stopPropagation(); window.appActions.openMoneyModal('${goal.id}', 'add_self')" class="text-xs ${btnClass} px-4 py-2 rounded-2xl shadow-sm font-bold">Pune</button>
-                            <button onclick="event.stopPropagation(); window.appActions.openMoneyModal('${goal.id}', 'remove_self')" class="text-xs bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-white px-4 py-2 rounded-2xl shadow-sm font-bold">Scoate</button>
-                        ` : (!isCompleted ? `
-                            <button onclick="event.stopPropagation(); window.appActions.openMoneyModal('${goal.id}', 'gift')" class="text-xs ${btnClass} px-4 py-2 rounded-2xl shadow-sm font-bold">Oferă</button>
-                        ` : '')}
-                    </div>
-                </div>
-            `;
-        };
-
-        const showConfetti = () => {
-            const root = document.getElementById('confettiRoot');
-            const colors = ['#22c55e', '#6366f1', '#ef4444', '#f59e0b', '#06b6d4'];
-            for (let i = 0; i < 42; i++) {
-                const piece = document.createElement('div');
-                piece.className = 'confetti-piece';
-                piece.style.left = Math.random() * 100 + 'vw';
-                piece.style.background = colors[Math.floor(Math.random() * colors.length)];
-                piece.style.animationDelay = (Math.random() * 0.25) + 's';
-                piece.style.transform = `rotate(${Math.random() * 180}deg)`;
-                root.appendChild(piece);
-                setTimeout(() => piece.remove(), 1800);
-            }
-        };
-
-        window.appActions = {
-            selectRole: (role) => {
-                window.selectedSignupRole = role;
-                const btnSot = document.getElementById('btnRoleSot');
-                const btnSotie = document.getElementById('btnRoleSotie');
-                if (!btnSot || !btnSotie) return;
-                if (role === 'sot') {
-                    btnSot.className = "flex-1 py-3 rounded-xl font-bold border-2 transition-all border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400";
-                    btnSotie.className = "flex-1 py-3 rounded-xl font-bold border-2 transition-all border-slate-200 dark:border-slate-700 text-slate-500";
-                } else {
-                    btnSotie.className = "flex-1 py-3 rounded-xl font-bold border-2 transition-all border-red-500 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400";
-                    btnSot.className = "flex-1 py-3 rounded-xl font-bold border-2 transition-all border-slate-200 dark:border-slate-700 text-slate-500";
-                }
-            },
-            toggleAuthMode: (isLogin) => renderAuth(isLogin),
-            switchTab: (tab) => { previousTab = currentTab; currentTab = tab; renderMain(); },
-            goBack: () => { currentTab = previousTab && previousTab !== currentTab ? previousTab : 'home'; renderMain(); },
-            openCalculator: () => { previousTab = currentTab; currentTab = 'calculator'; renderMain(); },
-            openGoalStats: (goalId) => { selectedGoalId = goalId; previousTab = currentTab; currentTab = 'goalStats'; renderMain(); },
-            changeDate: (date) => {
-                if (Date.now() < calendarSwipeBlockClickUntil) return;
-                selectedDate = date;
-                renderMain();
-            },
-            shiftDate: (days) => {
-                selectedDate = addDays(selectedDate, days);
-                renderMain();
-            },
-            calendarSwipeStart: (e) => {
-                if (e.target.closest('button')) return;
-                calendarDragging = true;
-                touchStartX = e.clientX;
-                touchCurrentX = e.clientX;
-                const track = document.getElementById('calendarDaysTrack');
-                if (track) track.classList.add('dragging');
-                try { e.currentTarget.setPointerCapture(e.pointerId); } catch (_) {}
-            },
-            calendarSwipeMove: (e) => {
-                if (!calendarDragging) return;
-                touchCurrentX = e.clientX;
-                const diff = touchCurrentX - touchStartX;
-                const track = document.getElementById('calendarDaysTrack');
-                if (track) track.style.transform = `translateX(${Math.max(-85, Math.min(85, diff))}px)`;
-            },
-            calendarSwipeEnd: (e) => {
-                if (!calendarDragging) return;
-                calendarDragging = false;
-                const diff = (e.clientX || touchCurrentX) - touchStartX;
-                const track = document.getElementById('calendarDaysTrack');
-                if (track) {
-                    track.classList.remove('dragging');
-                    track.style.transform = '';
-                }
-                if (Math.abs(diff) > 35) {
-                    calendarSwipeBlockClickUntil = Date.now() + 350;
-                    window.appActions.shiftDate(diff < 0 ? 1 : -1);
-                }
-            },
-            calendarSwipeCancel: () => {
-                calendarDragging = false;
-                const track = document.getElementById('calendarDaysTrack');
-                if (track) {
-                    track.classList.remove('dragging');
-                    track.style.transform = '';
-                }
-            },
-            closeModal: () => { document.getElementById('modalContainer').innerHTML = ''; },
-            toggleTheme: () => {
-                const html = document.documentElement;
-                const dark = html.classList.toggle('dark');
-                localStorage.setItem('appTheme', dark ? 'dark' : 'light');
-            },
-            uploadAvatar: (e) => {
-                const file = e.target.files[0];
-                if (!file || !currentUser) return;
-                if (file.size > 900000) {
-                    alert('Poza e cam mare. Alege una mai mică sau fă screenshot/crop.');
-                    return;
-                }
-                const reader = new FileReader();
-                reader.onload = async (ev) => {
-                    const avatar = ev.target.result;
-                    const role = getRole(currentUser.email);
-                    const { error } = await supabase.from('profiles').upsert({
-                        id: currentUser.id,
-                        email: currentUser.email,
-                        role,
-                        avatar
-                    }, { onConflict: 'id' });
-                    if (error) return alert('Eroare la salvarea pozei: ' + error.message);
-                    const localProfile = getProfile(currentUser.email);
-                    if (localProfile) localProfile.avatar = avatar;
-                    else profiles.push({ id: currentUser.id, email: currentUser.email, role, avatar });
-                    renderMain();
-                };
-                reader.readAsDataURL(file);
-            },
-            handleAuth: async (isLogin) => {
-                const email = document.getElementById('emailInput').value.trim();
-                const password = document.getElementById('passInput').value;
-                const btn = document.getElementById('authBtn');
-                if (!email || !password) { alert('Completează ambele câmpuri!'); return; }
-                const keepSignedIn = document.getElementById('keepSignedInInput')?.checked !== false;
-                localStorage.setItem('keepSignedIn', keepSignedIn ? '1' : '0');
-                sessionStorage.setItem('activeSession', '1');
-                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Se conectează...';
-                btn.disabled = true;
-                authRenderLock = true;
-                try {
-                    let data;
-                    let error;
-                    if (isLogin) {
-                        const res = await supabase.auth.signInWithPassword({ email, password });
-                        data = res.data;
-                        error = res.error;
-                    } else {
-                        const res = await supabase.auth.signUp({ email, password, options: { data: { role: window.selectedSignupRole } } });
-                        data = res.data;
-                        error = res.error;
-                    }
-                    if (error) throw error;
-
-                    const user = data?.user || data?.session?.user;
-                    if (!user) {
-                        alert('Cont creat. Dacă ai confirmarea pe email activă, verifică emailul și apoi conectează-te.');
-                        authRenderLock = false;
-                        btn.innerHTML = isLogin ? 'Conectare' : 'Creează Cont';
-                        btn.disabled = false;
-                        return;
-                    }
-
-                    currentUser = user;
-                    await supabase.from('profiles').upsert({
-                        id: currentUser.id,
-                        email: currentUser.email,
-                        role: currentUser.user_metadata?.role || window.selectedSignupRole || 'sot'
-                    }, { onConflict: 'id' }).catch(console.error);
-
-                    await fetchData({ render: false }).catch(console.error);
-                    currentTab = 'home';
-                    renderMain();
-                    setupRealtime();
-                } catch (error) {
-                    alert('Eroare: ' + (error.message || 'Date incorecte.'));
-                    btn.innerHTML = isLogin ? 'Conectare' : 'Creează Cont';
-                    btn.disabled = false;
-                } finally {
-                    setTimeout(() => { authRenderLock = false; }, 500);
-                }
-            },
-            logout: async () => { sessionStorage.removeItem('activeSession'); await supabase.auth.signOut(); },
-            openAddGoalModal: () => {
-                document.getElementById('modalContainer').innerHTML = `
-                    <div class="fixed inset-0 modal-backdrop flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
-                        <div class="bg-white dark:bg-slate-800 rounded-t-3xl sm:rounded-3xl shadow-xl w-full max-w-md p-6 fade-in relative transition-colors">
-                            <div class="w-12 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full mx-auto mb-6 sm:hidden"></div>
-                            <button onclick="window.appActions.closeModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-white hidden sm:block"><i class="fas fa-times text-xl"></i></button>
-                            <h3 class="text-xl font-bold mb-4 text-slate-800 dark:text-white">Adaugă Obiectiv</h3>
-                            <div class="space-y-4">
-                                <div><label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Titlu</label><input type="text" id="goalTitleInput" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none dark:text-white" placeholder="ex. Vacanță"></div>
-                                <div><label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Suma necesară (RON)</label><input type="number" id="goalTargetInput" min="1" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none dark:text-white"></div>
-                                <div class="flex gap-3 pt-2"><button onclick="window.appActions.closeModal()" class="flex-1 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold py-3 rounded-xl">Anulează</button><button onclick="window.appActions.saveGoal()" id="saveGoalBtn" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition-colors">Salvează</button></div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            },
-            saveGoal: async () => {
-                const title = document.getElementById('goalTitleInput').value.trim();
-                const target = parseFloat(document.getElementById('goalTargetInput').value);
-                if (!title || isNaN(target) || target <= 0) return alert('Date invalide!');
-                const btn = document.getElementById('saveGoalBtn');
-                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; btn.disabled = true;
-                const newGoal = { title, target, current: 0, owner: currentUser.email };
-                const { data, error } = await supabase.from('goals').insert([newGoal]).select().single();
-                if (error) {
-                    alert('Eroare la adăugare: ' + error.message);
-                    btn.innerHTML = 'Salvează'; btn.disabled = false; return;
-                }
-                if (data) goals.unshift(data);
-                window.appActions.closeModal();
-                renderMain();
-                scheduleSoftFetch();
-            },
-            openMoneyModal: (goalId, mode) => {
-                const goal = goals.find(g => g.id === goalId);
-                if (!goal) return;
-                const title = mode === 'remove_self' ? 'Scoate bani' : mode === 'gift' ? 'Oferă bani' : 'Pune bani';
-                const btnTitle = mode === 'remove_self' ? 'Scoate' : mode === 'gift' ? 'Oferă' : 'Pune';
-                const btnClass = mode === 'remove_self' ? 'bg-slate-700 hover:bg-slate-800 text-white' : 'bg-green-500 hover:bg-green-600 text-white';
-                document.getElementById('modalContainer').innerHTML = `
-                    <div class="fixed inset-0 modal-backdrop flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
-                        <div class="bg-white dark:bg-slate-800 rounded-t-3xl sm:rounded-3xl shadow-xl w-full max-w-md p-6 fade-in relative">
-                            <div class="w-12 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full mx-auto mb-6 sm:hidden"></div>
-                            <h3 class="text-xl font-bold mb-1 text-slate-800 dark:text-white">${title}</h3>
-                            <p class="text-sm text-slate-500 dark:text-slate-400 mb-5">Pentru „${goal.title}”</p>
-                            <div class="space-y-4">
-                                <div class="relative"><span class="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-500 font-medium">RON</span><input type="number" id="moneyAmountInput" min="1" class="w-full pl-14 pr-4 py-4 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl outline-none text-xl font-bold text-slate-800 dark:text-white" placeholder="0"></div>
-                                <div class="flex gap-3 pt-2"><button onclick="window.appActions.closeModal()" class="flex-1 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold py-3 rounded-xl">Anulează</button><button onclick="window.appActions.applyMoney('${goalId}', '${mode}')" id="moneyActionBtn" class="flex-1 ${btnClass} font-bold py-3 rounded-xl transition-colors">${btnTitle}</button></div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            },
-            applyMoney: async (goalId, mode) => {
-                const amountRaw = parseFloat(document.getElementById('moneyAmountInput').value);
-                if (isNaN(amountRaw) || amountRaw <= 0) return alert('Sumă invalidă!');
-                const goal = goals.find(g => g.id === goalId);
-                if (!goal) return;
-                if (mode === 'remove_self' && goal.owner !== currentUser.email) return alert('Poți scoate bani doar din obiectivul tău.');
-                const signedAmount = mode === 'remove_self' ? -amountRaw : amountRaw;
-                const oldAmount = Number(goal.current || 0);
-                const btn = document.getElementById('moneyActionBtn');
-                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; btn.disabled = true;
-
-                let newAmount = Math.max(0, oldAmount + signedAmount);
-                const { data: rpcAmount, error: rpcError } = await supabase.rpc('adjust_goal_amount', {
-                    p_goal_id: goalId,
-                    p_delta: signedAmount
-                });
-
-                if (rpcError) {
-                    const { error: updateError } = await supabase.from('goals').update({ current: newAmount }).eq('id', goalId);
-                    if (updateError) { alert('Eroare: ' + updateError.message); window.appActions.closeModal(); return; }
-                } else if (rpcAmount !== null && rpcAmount !== undefined) {
-                    newAmount = Number(rpcAmount);
-                }
-
-                const { error: transError } = await supabase.from('transactions').insert([{
-                    goal_id: goalId,
-                    goal_title: goal.title,
-                    amount: signedAmount,
-                    from_role: currentUser.email,
-                    to_role: goal.owner,
-                    date: todayISO(),
-                    timestamp: new Date().toISOString()
-                }]);
-                if (transError) console.error('transaction insert', transError);
-                goal.current = newAmount;
-                window.appActions.closeModal();
-                renderMain();
-                if (oldAmount < Number(goal.target || 0) && newAmount >= Number(goal.target || 0)) showConfetti();
-                scheduleSoftFetch();
-            },
-            calcPress: (v) => {
-                if (v === 'C') { calcExpression = ''; calcResult = '0'; renderMain(); return; }
-                const value = v === '×' ? '*' : v === '÷' ? '/' : v;
-                calcExpression += value;
-                renderMain();
-            },
-            calcBackspace: () => { calcExpression = calcExpression.slice(0, -1); renderMain(); },
-            calcEquals: () => {
-                try {
-                    if (!calcExpression || !/^[0-9+\-*/().\s]+$/.test(calcExpression)) throw new Error('Calcul invalid');
-                    const result = Function('"use strict"; return (' + calcExpression + ')')();
-                    if (!Number.isFinite(Number(result))) throw new Error('Rezultat invalid');
-                    calcResult = String(Math.round(Number(result) * 100) / 100);
-                } catch (error) {
-                    calcResult = 'Eroare';
-                }
-                renderMain();
-            },
-            saveCalculation: async () => {
-                if (!calcExpression || calcResult === '0' || calcResult === 'Eroare') return alert('Fă întâi un calcul valid.');
-                const note = document.getElementById('calcNoteInput')?.value?.trim() || '';
-                const btn = document.getElementById('saveCalcBtn');
-                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; btn.disabled = true;
-                const { error } = await supabase.from('calculator_history').insert([{ user_email: currentUser.email, expression: calcExpression, result: calcResult, note }]);
-                if (error) { alert('Eroare la salvare: ' + error.message); btn.innerHTML = 'Salvează Calcul'; btn.disabled = false; return; }
-                await fetchData({ soft: true });
-            }
-        };
-
-        checkAuth().catch((error) => {
-            console.error('Start app error:', error);
-            appContainer.innerHTML = `
-                <div class="flex min-h-screen items-center justify-center p-6 bg-slate-50 dark:bg-slate-900">
-                    <div class="bg-white dark:bg-slate-800 rounded-3xl p-6 shadow-sm border border-slate-100 dark:border-slate-700 text-center max-w-sm">
-                        <div class="w-14 h-14 rounded-full bg-red-50 text-red-500 flex items-center justify-center mx-auto mb-4">!</div>
-                        <h2 class="font-bold text-xl text-slate-800 dark:text-white mb-2">Eroare la pornire</h2>
-                        <p class="text-sm text-slate-500 dark:text-slate-400 mb-4">${error.message || error}</p>
-                        <button onclick="location.reload()" class="bg-indigo-600 text-white font-bold px-5 py-3 rounded-xl">Reîncarcă</button>
-                    </div>
-                </div>
-            `;
+    async function start() {
+      try {
+        const { data, error } = await supabase.auth.getSession();
+        if (error) throw error;
+        const session = data.session;
+        if (session && localStorage.getItem('keepLogged') === '0') {
+          await supabase.auth.signOut();
+          authHTML(true);
+          return;
+        }
+        if (session) {
+          currentUser = session.user;
+          await ensureOwnProfile();
+          await fetchData();
+          setupRealtime();
+        } else authHTML(true);
+        supabase.auth.onAuthStateChange(async (_event, session) => {
+          if (session?.user && session.user.id !== currentUser?.id) {
+            currentUser = session.user;
+            await ensureOwnProfile();
+            await fetchData();
+            setupRealtime();
+          } else if (!session && currentUser) {
+            currentUser = null;
+            authHTML(true);
+          }
         });
-    </script>
+      } catch (e) {
+        console.error(e);
+        app.innerHTML = `<div class="screen no-nav flex flex-col justify-center"><div class="card text-center"><h2 class="text-xl font-medium mb-2">Eroare la pornire</h2><p class="text-sm muted mb-4">${escapeHTML(e.message || e)}</p><button class="btn btn-gold btn-full" onclick="location.reload()">Reîncarcă</button></div></div>`;
+      }
+    }
+
+    start();
+  </script>
 </body>
 </html>
