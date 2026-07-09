@@ -1163,6 +1163,9 @@
     const supabaseKey = 'sb_publishable_eqlbyUXpwcp-i-dPhFPsmA_wHqDW1AD';
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    const VAPID_PUBLIC_KEY = 'BHmIiiGCzhTm7EB4wJXYWjCZ4p7etMndAC_xvJyhrqtzdZZNaeW4E064cMWigC9vI4nwD4pQiroBF9qSsbzS4d0';
+    const PUSH_SERVICE_WORKER_PATH = './service-worker.js';
+
     let currentUser = null;
     let goals = [];
     let transactions = [];
@@ -1342,6 +1345,44 @@
     const NOTIFICATION_READY_KEY = 'familie_push_notifications_ready';
     const notificationsAreReady = () => localStorage.getItem(NOTIFICATION_READY_KEY) === '1' || (typeof Notification !== 'undefined' && Notification.permission === 'granted');
     const notificationButtonText = () => notificationsAreReady() ? 'Notificari Activate' : 'Activeaza notificarile';
+    const pushSupported = () => 'serviceWorker' in navigator && 'PushManager' in window && typeof Notification !== 'undefined';
+    const urlBase64ToUint8Array = (base64String) => {
+      const padding = '='.repeat((4 - base64String.length % 4) % 4);
+      const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+      const rawData = atob(base64);
+      return Uint8Array.from([...rawData].map(char => char.charCodeAt(0)));
+    };
+    async function savePushSubscription(pushSub) {
+      if (!pushSub || !currentUser?.email) throw new Error('Lipsește abonamentul de notificări.');
+      const payload = {
+        endpoint: pushSub.endpoint,
+        subscription: pushSub.toJSON(),
+        user_email: currentUser.email,
+        user_role: getRole(currentUser.email),
+        family_code: familyCode || DEFAULT_FAMILY_CODE,
+        user_agent: navigator.userAgent,
+        enabled: true,
+        updated_at: new Date().toISOString()
+      };
+      const result = await supabase.from('push_subscriptions').upsert(payload, { onConflict: 'endpoint' });
+      if (result.error) throw result.error;
+    }
+    async function sendPushNotification(payload) {
+      try {
+        if (!payload?.title || !payload?.body || !familyCode) return;
+        await supabase.functions.invoke('send-push', {
+          body: {
+            ...payload,
+            family_code: familyCode || DEFAULT_FAMILY_CODE,
+            actor_email: currentUser?.email || '',
+            actor_role: getRole(currentUser?.email),
+            url: location.origin + location.pathname
+          }
+        });
+      } catch (error) {
+        console.warn('Notificarea push nu a fost trimisă:', error);
+      }
+    }
     const ownerLabel = (email) => email === currentUser?.email ? 'Tu' : roleLabel(getRole(email));
     const partnerEmail = () => profiles.find(p => p.email && p.email !== currentUser?.email && (!familyCode || p.family_code === familyCode))?.email || goals.find(g => g.owner && g.owner !== currentUser?.email && (!familyCode || g.family_code === familyCode))?.owner || null;
     const isGoalDone = (goal) => Number(goal?.current || 0) >= Number(goal?.target || 1);
@@ -2680,25 +2721,51 @@ function piggyPageHTML() {
       async preparePushNotifications() {
         const btn = document.getElementById('pushNotificationBtn');
         if (btn) { btn.textContent = 'Se activeaza...'; btn.disabled = true; }
+
         try {
-          if (typeof Notification === 'undefined') {
+          if (!pushSupported()) {
             if (btn) { btn.textContent = 'Activeaza notificarile'; btn.disabled = false; }
-            return alert('Telefonul sau browserul nu suportă notificări web aici.');
+            return alert('Telefonul sau browserul nu suportă notificări push web aici.');
+          }
+
+          if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
+            if (btn) { btn.textContent = 'Activeaza notificarile'; btn.disabled = false; }
+            return alert('Notificările push merg doar pe HTTPS sau localhost.');
           }
 
           let permission = Notification.permission;
           if (permission === 'default') permission = await Notification.requestPermission();
 
-          if (permission === 'granted') {
-            localStorage.setItem(NOTIFICATION_READY_KEY, '1');
-            if (btn) { btn.textContent = 'Notificari Activate'; btn.className = 'btn btn-soft'; btn.disabled = true; }
-            return;
+          if (permission !== 'granted') {
+            localStorage.removeItem(NOTIFICATION_READY_KEY);
+            if (btn) { btn.textContent = 'Activeaza notificarile'; btn.disabled = false; }
+            return alert('Notificările nu au fost activate. Trebuie acceptată permisiunea din browser.');
           }
 
-          localStorage.removeItem(NOTIFICATION_READY_KEY);
-          if (btn) { btn.textContent = 'Activeaza notificarile'; btn.disabled = false; }
-          alert('Notificările nu au fost activate. Trebuie acceptată permisiunea din browser.');
+          const registration = await navigator.serviceWorker.register(PUSH_SERVICE_WORKER_PATH);
+          await navigator.serviceWorker.ready;
+
+          let pushSub = await registration.pushManager.getSubscription();
+          if (!pushSub) {
+            pushSub = await registration.pushManager.subscribe({
+              userVisibleOnly: true,
+              applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+            });
+          }
+
+          await savePushSubscription(pushSub);
+          localStorage.setItem(NOTIFICATION_READY_KEY, '1');
+
+          if (btn) { btn.textContent = 'Notificari Activate'; btn.className = 'btn btn-soft'; btn.disabled = true; }
+
+          try {
+            new Notification('Notificari Activate', {
+              body: 'Vei primi notificări pentru aplicația voastră.',
+              tag: 'familie-test'
+            });
+          } catch (_) {}
         } catch (error) {
+          localStorage.removeItem(NOTIFICATION_READY_KEY);
           if (btn) { btn.textContent = 'Activeaza notificarile'; btn.disabled = false; }
           alert('Nu am putut activa notificările acum: ' + (error.message || error));
         }
@@ -3038,6 +3105,13 @@ function piggyPageHTML() {
 
           if (tr.error) throw tr.error;
           if (tr.data) transactions = transactions.map(t => t.id === localId ? tr.data : t);
+
+          sendPushNotification({
+            event_type: 'piggy_coin',
+            title: 'Monedă nouă în pușculiță',
+            body: `Încă un bănuț pus împreună. Pușculița are acum ${money(afterBalance)} RON.`
+          });
+
           suppressSoftUntil = Date.now() + 1600;
           scheduleSoftRefresh();
         }).catch((error) => {
