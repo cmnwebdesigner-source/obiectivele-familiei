@@ -636,9 +636,9 @@
     .family-code-card .btn { padding: 8px 10px; border-radius: 11px; white-space: nowrap; min-height: 36px; font-size: 12px; }
     .family-code-lock { display:grid; grid-template-columns: 1fr 1fr; gap:8px; align-items:end; }
     .family-code-value { display:flex; align-items:center; justify-content:center; width:100%; min-height:36px; padding:7px 12px; border-radius:12px; background:rgba(100,116,139,.12); border:1px solid rgba(100,116,139,.18); font-size:13px; letter-spacing:.12em; color:#64748b; }
-    .family-save-status { display:flex; align-items:center; justify-content:center; width:100%; min-height:36px; border-radius:12px; background:rgba(22,163,74,.12); border:1px solid rgba(22,163,74,.20); font-size:12px; color:var(--success); font-weight:600; white-space:nowrap; }
+    .family-save-status { display:flex; align-items:center; justify-content:center; width:100%; min-height:36px; font-size:12px; color:var(--success); font-weight:600; white-space:nowrap; background:transparent; border:0; border-radius:0; }
     body.dark-mode .family-code-value { background:rgba(148,163,184,.12); border-color:rgba(148,163,184,.18); color:#cbd5e1; }
-    body.dark-mode .family-save-status { background:rgba(22,163,74,.16); border-color:rgba(134,239,172,.20); color:#86efac; }
+    body.dark-mode .family-save-status { color:#86efac; background:transparent; border:0; }
     .family-code-note { display:none; }
     .profile-category-grid { display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom: 14px; }
     .profile-category-card {
@@ -1587,7 +1587,7 @@
           if (p) p.avatar = avatar;
           else profiles.push({ id:currentUser.id, email:currentUser.email, role, avatar, family_code: familyCode });
           renderApp(true);
-          scheduleSoftFetch();
+          scheduleSoftRefresh();
         } catch (error) {
           alert(error.message || 'Nu am putut procesa poza.');
         } finally {
