@@ -17,90 +17,171 @@
         }
     </script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-        body { 
-            font-family: 'Inter', sans-serif; 
-            -webkit-tap-highlight-color: transparent;
-        }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+        body { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
         .hide-scroll::-webkit-scrollbar { display: none; }
         .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
-        .fade-in { animation: fadeIn 0.3s ease-in-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        
-        .modal-backdrop {
-            background-color: rgba(0, 0, 0, 0.6);
-            backdrop-filter: blur(4px);
-        }
-        
-        /* Fix for bottom nav safe area on modern phones */
+        .fade-in { animation: fadeIn 0.25s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        .modal-backdrop { background-color: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px); }
         .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+        .calendar-strip { scroll-snap-type: x mandatory; }
+        .calendar-day { scroll-snap-align: center; }
+        .goal-card { transition: transform .15s ease, box-shadow .15s ease; }
+        .goal-card:active { transform: scale(.985); }
+        .confetti-piece {
+            position: fixed;
+            top: -12px;
+            width: 8px;
+            height: 12px;
+            border-radius: 3px;
+            z-index: 9999;
+            animation: confettiFall 1.45s ease-out forwards;
+        }
+        @keyframes confettiFall {
+            0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(105vh) rotate(720deg); opacity: 0; }
+        }
     </style>
 </head>
 <body class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 antialiased min-h-screen transition-colors duration-300">
-
     <div id="app" class="max-w-md mx-auto min-h-screen flex flex-col relative pb-20 shadow-2xl bg-slate-50 dark:bg-slate-900">
         <div class="flex h-screen items-center justify-center text-indigo-500 font-bold">Se încarcă...</div>
     </div>
-
-    <!-- Modals Container -->
     <div id="modalContainer"></div>
+    <div id="confettiRoot"></div>
 
     <script type="module">
         import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 
-        // 1. Supabase Init
         const supabaseUrl = 'https://hfqsouqtqvyxegcrabnc.supabase.co';
         const supabaseKey = 'sb_publishable_eqlbyUXpwcp-i-dPhFPsmA_wHqDW1AD';
         const supabase = createClient(supabaseUrl, supabaseKey);
 
-        // State
         let currentUser = null;
         let goals = [];
         let transactions = [];
+        let profiles = [];
+        let calculatorHistory = [];
         let currentTab = 'home';
+        let previousTab = 'home';
+        let selectedGoalId = null;
         let selectedDate = new Date().toISOString().split('T')[0];
         let realTimeSubscription = null;
         let deferredPrompt = null;
-        window.selectedSignupRole = 'sot'; // Pentru a retine rolul ales la inregistrare
+        let calcExpression = '';
+        let calcResult = '0';
+        let touchStartX = 0;
+        window.selectedSignupRole = 'sot';
 
         const appContainer = document.getElementById('app');
 
-        // Theme Initialization
+        const money = (value) => {
+            const n = Number(value || 0);
+            return n.toLocaleString('ro-RO', { maximumFractionDigits: 2 });
+        };
+
+        const todayISO = () => new Date().toISOString().split('T')[0];
+
+        const addDays = (dateStr, days) => {
+            const d = new Date(dateStr + 'T12:00:00');
+            d.setDate(d.getDate() + days);
+            return d.toISOString().split('T')[0];
+        };
+
+        const formatShortDate = (dateStr) => {
+            const d = new Date(dateStr + 'T12:00:00');
+            return d.toLocaleDateString('ro-RO', { weekday: 'short', day: '2-digit', month: 'short' });
+        };
+
+        const formatFullDate = (dateStr) => {
+            const d = new Date(dateStr + 'T12:00:00');
+            return d.toLocaleDateString('ro-RO', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' });
+        };
+
+        const getProfile = (email) => profiles.find(p => p.email === email);
+        const getRole = (email) => {
+            if (email === currentUser?.email) return getProfile(email)?.role || currentUser?.user_metadata?.role || 'sot';
+            return getProfile(email)?.role || 'sotie';
+        };
+        const roleLabel = (role) => role === 'sotie' ? 'Soție' : 'Soț';
+        const ownerLabel = (email) => email === currentUser?.email ? 'Tu' : roleLabel(getRole(email));
+        const getPartnerEmail = () => {
+            const p = profiles.find(p => p.email && p.email !== currentUser?.email);
+            if (p) return p.email;
+            const goal = goals.find(g => g.owner !== currentUser?.email);
+            return goal ? goal.owner : null;
+        };
+
+        const redBtn = 'bg-red-500 hover:bg-red-600 text-white';
+        const indigoBtn = 'bg-indigo-600 hover:bg-indigo-700 text-white';
+        const accentButton = (role) => role === 'sotie' ? redBtn : indigoBtn;
+        const accentText = (role) => role === 'sotie' ? 'text-red-600 dark:text-red-400' : 'text-indigo-600 dark:text-indigo-400';
+        const accentBorder = (role) => role === 'sotie' ? 'border-red-400' : 'border-indigo-500';
+        const accentBgSoft = (role) => role === 'sotie' ? 'bg-red-50 dark:bg-red-900/20' : 'bg-indigo-50 dark:bg-indigo-900/20';
+        const accentBar = (role) => role === 'sotie' ? 'bg-red-500' : 'bg-indigo-500';
+
         const initTheme = () => {
             const savedTheme = localStorage.getItem('appTheme') || 'light';
-            if (savedTheme === 'dark') document.documentElement.classList.add('dark');
-            else document.documentElement.classList.remove('dark');
+            document.documentElement.classList.toggle('dark', savedTheme === 'dark');
         };
         initTheme();
 
-        // PWA Install Logic (Fara Banner UI)
-        const initPWA = () => {
-            window.addEventListener('beforeinstallprompt', (e) => {
-                // Previne aparitia prompt-ului automat in unele browsere
-                e.preventDefault();
-                // Salveaza evenimentul in spate pentru a fi folosit ulterior daca e nevoie
-                deferredPrompt = e;
-            });
-        };
-        initPWA();
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+        });
 
-        // Auth Logic
+        const safeFetch = async (label, promise) => {
+            try {
+                const { data, error } = await promise;
+                if (error) {
+                    console.error(label, error);
+                    return [];
+                }
+                return data || [];
+            } catch (error) {
+                console.error(label, error);
+                return [];
+            }
+        };
+
+        const ensureOwnProfile = async () => {
+            if (!currentUser) return;
+            const existingRole = currentUser.user_metadata?.role || window.selectedSignupRole || 'sot';
+            await supabase.from('profiles').upsert({
+                id: currentUser.id,
+                email: currentUser.email,
+                role: existingRole
+            }, { onConflict: 'id' });
+        };
+
         const checkAuth = async () => {
             appContainer.innerHTML = `<div class="flex h-screen items-center justify-center"><i class="fas fa-spinner fa-spin text-4xl text-indigo-500"></i></div>`;
-            const { data: { session } } = await supabase.auth.getSession();
+            const { data: { session }, error } = await supabase.auth.getSession();
+            if (error) throw error;
             if (session) {
                 currentUser = session.user;
-                fetchData().then(() => setupRealtime());
+                await ensureOwnProfile();
+                await fetchData();
+                setupRealtime();
             } else {
                 renderAuth();
             }
 
-            supabase.auth.onAuthStateChange((_event, session) => {
-                if (session && !currentUser) {
+            supabase.auth.onAuthStateChange(async (_event, session) => {
+                if (session) {
                     currentUser = session.user;
-                    fetchData().then(() => setupRealtime());
-                } else if (!session && currentUser) {
+                    await ensureOwnProfile();
+                    await fetchData();
+                    setupRealtime();
+                } else {
                     currentUser = null;
+                    goals = [];
+                    transactions = [];
+                    profiles = [];
+                    calculatorHistory = [];
+                    currentTab = 'home';
                     renderAuth();
                 }
             });
@@ -108,35 +189,36 @@
 
         const fetchData = async () => {
             if (!currentUser) return;
-            try {
-                const { data: goalsData } = await supabase.from('goals').select('*').order('created_at', { ascending: false });
-                if (goalsData) goals = goalsData;
-
-                const { data: transData } = await supabase.from('transactions').select('*').order('timestamp', { ascending: false });
-                if (transData) transactions = transData;
-
-                renderMain();
-            } catch (error) {
-                console.error(error);
-            }
+            const [goalsData, transData, profileData, calcData] = await Promise.all([
+                safeFetch('goals', supabase.from('goals').select('*').order('created_at', { ascending: false })),
+                safeFetch('transactions', supabase.from('transactions').select('*').order('timestamp', { ascending: false })),
+                safeFetch('profiles', supabase.from('profiles').select('*').order('created_at', { ascending: true })),
+                safeFetch('calculator_history', supabase.from('calculator_history').select('*').eq('user_email', currentUser.email).order('created_at', { ascending: false }).limit(30))
+            ]);
+            goals = goalsData;
+            transactions = transData;
+            profiles = profileData;
+            calculatorHistory = calcData;
+            renderMain();
         };
 
         const setupRealtime = () => {
             if (realTimeSubscription) supabase.removeChannel(realTimeSubscription);
             realTimeSubscription = supabase.channel('public-changes')
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'goals' }, fetchData)
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, fetchData)
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'goals' }, () => fetchData())
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, () => fetchData())
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => fetchData())
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'calculator_history' }, () => fetchData())
                 .subscribe();
         };
 
-        // UI Renders
         const renderAuth = (isLogin = true) => {
             const roleSelector = isLogin ? '' : `
                 <div class="mb-4 fade-in">
                     <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Alege Profilul:</label>
                     <div class="flex gap-3">
-                        <button type="button" id="btnRoleSot" onclick="window.appActions.selectRole('sot')" class="flex-1 py-3 rounded-xl font-bold border-2 transition-all border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400">👨 Soțul</button>
-                        <button type="button" id="btnRoleSotie" onclick="window.appActions.selectRole('sotie')" class="flex-1 py-3 rounded-xl font-bold border-2 transition-all border-slate-200 dark:border-slate-700 text-slate-500">👩 Soția</button>
+                        <button type="button" id="btnRoleSot" onclick="window.appActions.selectRole('sot')" class="flex-1 py-3 rounded-xl font-bold border-2 transition-all border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400">Soț</button>
+                        <button type="button" id="btnRoleSotie" onclick="window.appActions.selectRole('sotie')" class="flex-1 py-3 rounded-xl font-bold border-2 transition-all border-slate-200 dark:border-slate-700 text-slate-500">Soție</button>
                     </div>
                 </div>
             `;
@@ -155,13 +237,13 @@
                         ${roleSelector}
                         <div>
                             <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Email</label>
-                            <input type="email" id="emailInput" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none dark:text-white" placeholder="tu@familie.ro">
+                            <input type="email" id="emailInput" autocomplete="email" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none dark:text-white" placeholder="tu@familie.ro">
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Parolă</label>
-                            <input type="password" id="passInput" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none dark:text-white" placeholder="••••••••">
+                            <input type="password" id="passInput" autocomplete="${isLogin ? 'current-password' : 'new-password'}" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none dark:text-white" placeholder="••••••••">
                         </div>
-                        
+                        <p class="text-xs text-slate-400 dark:text-slate-500 -mt-1"><i class="fas fa-lock mr-1"></i>Salvează parola pentru o conectare mai rapidă.</p>
                         <button id="authBtn" onclick="window.appActions.handleAuth(${isLogin})" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition-all shadow-md mt-4">
                             ${isLogin ? 'Conectare' : 'Creează Cont'}
                         </button>
@@ -178,161 +260,196 @@
 
         const renderMain = () => {
             let content = '';
+            let showNav = true;
             if (currentTab === 'home') content = getHomeHTML();
             else if (currentTab === 'profile') content = getProfileHTML();
-            else if (currentTab === 'partner') content = getPartnerProfileHTML(); // Adaugat profil partener
+            else if (currentTab === 'partner') content = getPartnerProfileHTML();
+            else if (currentTab === 'calculator') { content = getCalculatorHTML(); showNav = false; }
+            else if (currentTab === 'goalStats') { content = getGoalStatsHTML(); showNav = false; }
+            else content = getHomeHTML();
 
             appContainer.innerHTML = `
-                <div class="flex-1 overflow-y-auto hide-scroll pb-24 p-4 md:p-6 fade-in h-full">
+                <div class="flex-1 overflow-y-auto hide-scroll ${showNav ? 'pb-24' : 'pb-6'} p-4 md:p-6 fade-in h-full">
                     ${content}
                 </div>
-                ${getBottomNavHTML()}
+                ${showNav ? getBottomNavHTML() : ''}
             `;
         };
 
         const getHomeHTML = () => {
+            const myRole = getRole(currentUser.email);
+            const partnerRole = myRole === 'sot' ? 'sotie' : 'sot';
+            const myRoleName = roleLabel(myRole);
+            const partnerRoleName = myRole === 'sot' ? 'Soției' : 'Soțului';
             const myGoals = goals.filter(g => g.owner === currentUser.email);
             const partnerGoals = goals.filter(g => g.owner !== currentUser.email);
-            const todaysTransactions = transactions.filter(t => t.date === selectedDate);
-            const totalAddedToday = todaysTransactions.reduce((sum, t) => sum + Number(t.amount), 0);
-
-            // Calculare statistici cadouri
-            const totalOferit = transactions.filter(t => t.from_role === currentUser.email).reduce((sum, t) => sum + Number(t.amount), 0);
-            const totalPrimit = transactions.filter(t => t.to_role === currentUser.email).reduce((sum, t) => sum + Number(t.amount), 0);
-
-            const myRole = currentUser.user_metadata?.role || 'sot';
-            const partnerRoleName = myRole === 'sot' ? 'Soției' : 'Soțului';
-            const myRoleName = myRole === 'sot' ? 'Soțul' : 'Soția';
-            const partnerAccent = myRole === 'sot' ? 'rose' : 'indigo';
-            const myAccent = myRole === 'sot' ? 'indigo' : 'rose';
+            const selectedTransactions = transactions.filter(t => String(t.date).slice(0, 10) === selectedDate);
+            const totalSelected = selectedTransactions.reduce((sum, t) => sum + Number(t.amount || 0), 0);
+            const totalOferit = transactions.filter(t => t.from_role === currentUser.email && t.to_role !== currentUser.email).reduce((sum, t) => sum + Math.max(0, Number(t.amount || 0)), 0);
+            const totalPrimit = transactions.filter(t => t.to_role === currentUser.email && t.from_role !== currentUser.email).reduce((sum, t) => sum + Math.max(0, Number(t.amount || 0)), 0);
 
             return `
-                <header class="flex justify-between items-center mb-6">
+                <header class="flex justify-between items-center mb-5">
                     <div>
-                        <h2 class="font-bold text-slate-800 dark:text-white text-2xl">Salut, ${myRoleName}! 👋</h2>
+                        <h2 class="font-bold text-slate-800 dark:text-white text-2xl">Salut, ${myRoleName}!</h2>
                         <p class="text-sm text-slate-500 dark:text-slate-400">Situația obiectivelor voastre</p>
                     </div>
-                    ${getAvatarHtml(12)}
+                    <div class="flex items-center gap-2">
+                        <button onclick="window.appActions.openCalculator()" class="w-11 h-11 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shadow-sm">
+                            <i class="fas fa-calculator"></i>
+                        </button>
+                        ${getAvatarHtml(11, currentUser.email)}
+                    </div>
                 </header>
 
-                <!-- Stats Row -->
-                <div class="grid grid-cols-2 gap-4 mb-6">
-                    <div class="bg-slate-100 dark:bg-slate-800/80 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col justify-center">
-                        <p class="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider mb-1"><i class="fas fa-arrow-up text-indigo-500 mr-1"></i>Ai Oferit</p>
-                        <p class="text-2xl font-black text-slate-800 dark:text-white">${totalOferit} <span class="text-sm font-medium text-slate-500">RON</span></p>
+                <div class="grid grid-cols-2 gap-3 mb-5">
+                    <div class="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm">
+                        <p class="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase mb-1">Ai oferit</p>
+                        <p class="text-2xl font-black text-slate-800 dark:text-white">${money(totalOferit)} <span class="text-sm font-medium text-slate-500">RON</span></p>
                     </div>
-                    <div class="bg-slate-100 dark:bg-slate-800/80 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col justify-center">
-                        <p class="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider mb-1"><i class="fas fa-arrow-down text-rose-500 mr-1"></i>Ai Primit</p>
-                        <p class="text-2xl font-black text-slate-800 dark:text-white">${totalPrimit} <span class="text-sm font-medium text-slate-500">RON</span></p>
+                    <div class="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm">
+                        <p class="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase mb-1">Ai primit</p>
+                        <p class="text-2xl font-black text-slate-800 dark:text-white">${money(totalPrimit)} <span class="text-sm font-medium text-slate-500">RON</span></p>
                     </div>
                 </div>
 
                 <div class="space-y-6">
-                    <section class="bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-sm border border-slate-100 dark:border-slate-700 border-t-4 border-t-${myAccent}-500">
-                        <h3 class="font-bold text-lg text-slate-800 dark:text-white mb-4 border-b border-slate-100 dark:border-slate-700 pb-2">Obiectivele Mele</h3>
-                        <div class="space-y-4">
-                            ${myGoals.length === 0 ? `<p class="text-center text-sm text-slate-400 py-4">Niciun obiectiv adăugat.</p>` : myGoals.map(g => generateGoalCard(g, true, myAccent)).join('')}
+                    <section class="bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-sm border border-slate-100 dark:border-slate-700">
+                        <div class="flex items-center justify-between mb-3">
+                            <h3 class="font-bold text-lg text-slate-800 dark:text-white">Obiectivele Mele</h3>
+                            <span class="h-1.5 w-16 rounded-full ${accentBar(myRole)}"></span>
                         </div>
-                    </section>
-
-                    <section class="bg-${partnerAccent}-50 dark:bg-${partnerAccent}-900/20 rounded-2xl p-5 shadow-sm border border-${partnerAccent}-100 dark:border-${partnerAccent}-500/30 border-t-4 border-t-${partnerAccent}-500 transition-transform active:scale-95">
-                        <div onclick="window.appActions.switchTab('partner')" class="flex justify-between items-center mb-4 border-b border-${partnerAccent}-200 dark:border-${partnerAccent}-500/30 pb-2 cursor-pointer group">
-                            <h3 class="font-bold text-lg text-${partnerAccent}-900 dark:text-${partnerAccent}-300">Obiectivele ${partnerRoleName}</h3>
-                            <span class="text-sm font-bold text-${partnerAccent}-600 dark:text-${partnerAccent}-400 group-hover:underline flex items-center gap-1">Vezi Profil <i class="fas fa-chevron-right text-[10px]"></i></span>
-                        </div>
-                        <div class="space-y-4">
-                            ${partnerGoals.length === 0 ? `<p class="text-center text-sm text-${partnerAccent}-400 py-4">Partenerul nu are obiective.</p>` : partnerGoals.slice(0, 2).map(g => generateGoalCard(g, false, partnerAccent)).join('')}
-                            ${partnerGoals.length > 2 ? `<button onclick="window.appActions.switchTab('partner')" class="w-full text-center text-sm font-medium text-${partnerAccent}-600 dark:text-${partnerAccent}-400 py-2 bg-${partnerAccent}-100 dark:bg-${partnerAccent}-900/50 rounded-xl mt-2">Vezi toate cele ${partnerGoals.length} obiective</button>` : ''}
-                        </div>
-                    </section>
-
-                    <!-- Calendar -->
-                    <section class="bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-sm border border-slate-100 dark:border-slate-700">
-                        <div class="flex justify-between items-center mb-4">
-                            <h3 class="font-bold text-lg text-slate-800 dark:text-white"><i class="far fa-calendar-alt text-indigo-500 mr-2"></i>Istoric</h3>
-                            <input type="date" value="${selectedDate}" onchange="window.appActions.changeDate(this.value)" class="bg-slate-100 dark:bg-slate-700 border-none text-slate-700 dark:text-white rounded-lg px-2 py-1 text-sm outline-none">
-                        </div>
-                        
-                        <div class="bg-green-50 dark:bg-green-900/20 rounded-xl p-3 mb-4 flex justify-between items-center">
-                            <span class="text-sm font-medium text-green-700 dark:text-green-400">Total azi:</span>
-                            <span class="font-bold text-lg text-green-600 dark:text-green-400">+${totalAddedToday} RON</span>
-                        </div>
-
                         <div class="space-y-3">
-                            ${todaysTransactions.length === 0 ? `<p class="text-center py-2 text-slate-400 text-sm">Nicio contribuție azi.</p>` : todaysTransactions.map(t => {
-                                const fromMe = t.from_role === currentUser.email;
-                                const giver = fromMe ? 'Tu' : 'Partenerul';
-                                return `
-                                <div class="flex justify-between items-center p-3 bg-slate-50 dark:bg-slate-700/50 rounded-xl">
-                                    <div>
-                                        <p class="font-medium text-slate-700 dark:text-slate-200 text-sm">${giver} a pus la <span class="font-bold">"${t.goal_title}"</span></p>
-                                        <p class="text-xs text-slate-400">${new Date(t.timestamp).toLocaleTimeString('ro-RO', {hour: '2-digit', minute:'2-digit'})}</p>
-                                    </div>
-                                    <span class="font-bold text-green-500 text-sm">+${t.amount}</span>
-                                </div>`
-                            }).join('')}
+                            ${myGoals.length === 0 ? `<p class="text-center text-sm text-slate-400 py-4">Niciun obiectiv adăugat.</p>` : myGoals.map(g => generateGoalCard(g, true)).join('')}
                         </div>
                     </section>
+
+                    <section class="${accentBgSoft(partnerRole)} rounded-2xl p-4 shadow-sm border border-slate-100 dark:border-slate-700">
+                        <div onclick="window.appActions.switchTab('partner')" class="flex items-center justify-between mb-3 cursor-pointer">
+                            <h3 class="font-bold text-lg text-slate-800 dark:text-white">Obiectivele ${partnerRoleName}</h3>
+                            <span class="h-1.5 w-16 rounded-full ${accentBar(partnerRole)}"></span>
+                        </div>
+                        <div class="space-y-3">
+                            ${partnerGoals.length === 0 ? `<p class="text-center text-sm text-slate-400 py-4">Partenerul nu are obiective.</p>` : partnerGoals.slice(0, 2).map(g => generateGoalCard(g, false)).join('')}
+                            ${partnerGoals.length > 2 ? `<button onclick="window.appActions.switchTab('partner')" class="w-full text-center text-sm font-medium ${accentText(partnerRole)} py-2 bg-white/70 dark:bg-slate-800 rounded-xl mt-2">Vezi toate cele ${partnerGoals.length} obiective</button>` : ''}
+                        </div>
+                    </section>
+
+                    <section class="bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-sm border border-slate-100 dark:border-slate-700">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="font-bold text-lg text-slate-800 dark:text-white"><i class="far fa-calendar-alt text-indigo-500 mr-2"></i>Istoric</h3>
+                            <span class="text-xs text-slate-400 dark:text-slate-500">glisează zilele</span>
+                        </div>
+                        ${getCalendarHTML()}
+                        <div class="bg-green-50 dark:bg-green-900/20 rounded-xl p-3 mb-4 flex justify-between items-center">
+                            <span class="text-sm font-medium text-green-700 dark:text-green-400">Toată ziua</span>
+                            <span class="font-bold text-lg ${totalSelected < 0 ? 'text-red-500' : 'text-green-600 dark:text-green-400'}">${totalSelected >= 0 ? '+' : ''}${money(totalSelected)} RON</span>
+                        </div>
+                        <div class="space-y-3">
+                            ${selectedTransactions.length === 0 ? `<p class="text-center py-2 text-slate-400 text-sm">Nicio mișcare în ziua asta.</p>` : selectedTransactions.map(t => getTransactionRow(t)).join('')}
+                        </div>
+                    </section>
+                </div>
+            `;
+        };
+
+        const getCalendarHTML = () => {
+            const days = [-3, -2, -1, 0, 1, 2, 3].map(offset => addDays(selectedDate, offset));
+            return `
+                <div class="mb-4 select-none" ontouchstart="window.appActions.calendarTouchStart(event)" ontouchend="window.appActions.calendarTouchEnd(event)">
+                    <div class="flex items-center justify-between mb-3">
+                        <button onclick="window.appActions.shiftDate(-1)" class="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-200"><i class="fas fa-chevron-left text-xs"></i></button>
+                        <div class="text-center">
+                            <p class="text-sm font-bold text-slate-800 dark:text-white capitalize">${formatFullDate(selectedDate)}</p>
+                        </div>
+                        <button onclick="window.appActions.shiftDate(1)" class="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-200"><i class="fas fa-chevron-right text-xs"></i></button>
+                    </div>
+                    <div class="calendar-strip flex gap-2 overflow-x-auto hide-scroll pb-1">
+                        ${days.map(d => {
+                            const active = d === selectedDate;
+                            const dateObj = new Date(d + 'T12:00:00');
+                            return `
+                                <button onclick="window.appActions.changeDate('${d}')" class="calendar-day min-w-[62px] py-2 rounded-2xl border transition-all ${active ? 'bg-indigo-600 border-indigo-600 text-white shadow-md' : 'bg-slate-50 dark:bg-slate-700 border-slate-100 dark:border-slate-600 text-slate-600 dark:text-slate-200'}">
+                                    <span class="block text-[10px] uppercase font-bold opacity-75">${dateObj.toLocaleDateString('ro-RO', { weekday: 'short' })}</span>
+                                    <span class="block text-lg font-black leading-5">${dateObj.getDate()}</span>
+                                </button>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+            `;
+        };
+
+        const getTransactionRow = (t) => {
+            const amount = Number(t.amount || 0);
+            const isNegative = amount < 0;
+            const fromMe = t.from_role === currentUser.email;
+            let text = '';
+            if (isNegative) text = `${fromMe ? 'Tu' : ownerLabel(t.from_role)} a scos din`;
+            else if (t.from_role === t.to_role) text = `${fromMe ? 'Tu' : ownerLabel(t.from_role)} a pus la`;
+            else text = `${fromMe ? 'Tu' : ownerLabel(t.from_role)} a oferit la`;
+            return `
+                <div class="flex justify-between items-center p-3 bg-slate-50 dark:bg-slate-700/50 rounded-xl">
+                    <div class="pr-3">
+                        <p class="font-medium text-slate-700 dark:text-slate-200 text-sm">${text} <span class="font-bold">„${t.goal_title}”</span></p>
+                        <p class="text-xs text-slate-400">${new Date(t.timestamp).toLocaleTimeString('ro-RO', {hour: '2-digit', minute:'2-digit'})}</p>
+                    </div>
+                    <span class="font-bold ${isNegative ? 'text-red-500' : 'text-green-500'} text-sm whitespace-nowrap">${isNegative ? '' : '+'}${money(amount)}</span>
                 </div>
             `;
         };
 
         const getPartnerProfileHTML = () => {
+            const partnerEmail = getPartnerEmail();
+            const partnerRole = partnerEmail ? getRole(partnerEmail) : (getRole(currentUser.email) === 'sot' ? 'sotie' : 'sot');
+            const partnerRoleName = roleLabel(partnerRole);
             const partnerGoals = goals.filter(g => g.owner !== currentUser.email);
-            const myRole = currentUser.user_metadata?.role || 'sot';
-            const partnerRoleName = myRole === 'sot' ? 'Soția' : 'Soțul';
-            const partnerAccent = myRole === 'sot' ? 'rose' : 'indigo';
-            
-            // Totalul pe care EU l-am trimis PARTENERULUI
-            const totalOferitEi = transactions.filter(t => t.from_role === currentUser.email).reduce((sum, t) => sum + Number(t.amount), 0);
+            const inProgress = partnerGoals.filter(g => Number(g.current || 0) < Number(g.target || 0));
+            const completed = partnerGoals.filter(g => Number(g.current || 0) >= Number(g.target || 0));
+            const totalOferit = transactions.filter(t => t.from_role === currentUser.email && t.to_role !== currentUser.email).reduce((sum, t) => sum + Math.max(0, Number(t.amount || 0)), 0);
 
             return `
                 <div class="fade-in max-w-sm mx-auto mt-2">
                     <button onclick="window.appActions.switchTab('home')" class="mb-6 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white transition-colors flex items-center gap-2 font-medium bg-slate-100 dark:bg-slate-800 px-4 py-2 rounded-full w-max">
                         <i class="fas fa-arrow-left"></i> Acasă
                     </button>
-                    
-                    <div class="bg-${partnerAccent}-50 dark:bg-${partnerAccent}-900/20 rounded-3xl p-6 shadow-sm border border-${partnerAccent}-100 dark:border-${partnerAccent}-500/30 flex flex-col items-center mb-8 relative">
-                        <div class="w-24 h-24 rounded-full bg-gradient-to-tr from-${partnerAccent}-400 to-${partnerAccent}-600 text-white flex items-center justify-center text-4xl font-bold shadow-lg shadow-${partnerAccent}-200 dark:shadow-none mb-4 border-4 border-white dark:border-slate-800">
-                            <i class="fas fa-${myRole === 'sot' ? 'female' : 'male'}"></i>
-                        </div>
-                        <h2 class="font-bold text-2xl text-slate-800 dark:text-white mb-1">Profil ${partnerRoleName}</h2>
-                        <div class="bg-white dark:bg-slate-800 px-4 py-2 rounded-xl mt-3 border border-${partnerAccent}-100 dark:border-${partnerAccent}-700 shadow-sm">
+                    <div class="${accentBgSoft(partnerRole)} rounded-3xl p-6 shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col items-center mb-6 relative">
+                        ${getAvatarHtml(24, partnerEmail)}
+                        <h2 class="font-bold text-2xl text-slate-800 dark:text-white mt-4 mb-1">${partnerRoleName}</h2>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 mb-3">${partnerEmail || 'Profil partener'}</p>
+                        <div class="bg-white dark:bg-slate-800 px-4 py-2 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm">
                             <p class="text-xs text-slate-500 dark:text-slate-400 font-medium uppercase text-center mb-1">Total dăruit de tine</p>
-                            <p class="font-black text-xl text-${partnerAccent}-600 dark:text-${partnerAccent}-400 text-center">${totalOferitEi} RON</p>
+                            <p class="font-black text-xl ${accentText(partnerRole)} text-center">${money(totalOferit)} RON</p>
                         </div>
                     </div>
-
-                    <div class="flex items-center justify-between mb-4 px-2">
-                        <h3 class="font-bold text-xl text-slate-800 dark:text-white">Toate Obiectivele</h3>
-                        <span class="bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-bold px-2 py-1 rounded-lg">${partnerGoals.length} active</span>
-                    </div>
-                    
-                    <div class="space-y-4">
-                        ${partnerGoals.length === 0 ? `
-                            <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl text-center border border-slate-100 dark:border-slate-700">
-                                <i class="fas fa-box-open text-3xl text-slate-300 dark:text-slate-600 mb-3"></i>
-                                <p class="text-sm text-slate-500 dark:text-slate-400 font-medium">Momentan nu are niciun obiectiv setat.</p>
-                            </div>
-                        ` : partnerGoals.map(g => generateGoalCard(g, false, partnerAccent)).join('')}
-                    </div>
+                    ${getGoalSection('Obiective în curs', inProgress, false)}
+                    ${getGoalSection('Obiective finalizate', completed, false)}
                 </div>
             `;
         };
 
+        const getGoalSection = (title, list, isMine) => `
+            <div class="mb-5">
+                <div class="flex items-center justify-between mb-3 px-1">
+                    <h3 class="font-bold text-lg text-slate-800 dark:text-white">${title}</h3>
+                    <span class="bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-bold px-2 py-1 rounded-lg">${list.length}</span>
+                </div>
+                <div class="space-y-3">
+                    ${list.length === 0 ? `<div class="bg-white dark:bg-slate-800 p-5 rounded-2xl text-center border border-slate-100 dark:border-slate-700"><p class="text-sm text-slate-400">Nimic aici momentan.</p></div>` : list.map(g => generateGoalCard(g, isMine)).join('')}
+                </div>
+            </div>
+        `;
+
         const getProfileHTML = () => {
             const isDark = document.documentElement.classList.contains('dark');
-            const myRole = currentUser.user_metadata?.role || 'sot';
-            const myRoleName = myRole === 'sot' ? '👨 Cont Soț' : '👩 Cont Soție';
-
+            const myRole = getRole(currentUser.email);
+            const myRoleName = roleLabel(myRole);
             return `
                 <div class="fade-in max-w-sm mx-auto mt-4">
                     <h2 class="font-bold text-2xl text-slate-800 dark:text-white mb-6 text-center">Setări Profil</h2>
-                    
-                    <!-- Avatar & Info -->
                     <div class="bg-white dark:bg-slate-800 rounded-3xl p-6 shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col items-center mb-6 relative">
                         <label class="cursor-pointer relative group">
-                            ${getAvatarHtml(24)}
+                            ${getAvatarHtml(24, currentUser.email)}
                             <div class="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                                 <i class="fas fa-camera text-white"></i>
                             </div>
@@ -341,8 +458,6 @@
                         <h3 class="mt-4 font-bold text-lg dark:text-white">${myRoleName}</h3>
                         <p class="text-sm text-slate-500 dark:text-slate-400">${currentUser.email}</p>
                     </div>
-
-                    <!-- Settings -->
                     <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden mb-6">
                         <div class="flex items-center justify-between p-4 border-b border-slate-100 dark:border-slate-700">
                             <div class="flex items-center gap-3 text-slate-700 dark:text-slate-200">
@@ -356,10 +471,9 @@
                         </div>
                         <div class="p-4 text-sm text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/50">
                             <p class="font-semibold mb-1 text-slate-700 dark:text-slate-300"><i class="fas fa-info-circle mr-1"></i> Despre Aplicație</p>
-                            <p>Obiectivele Familiei v1.0. Datele se sincronizează automat în timp real prin Supabase. Aplicația poate fi instalată pe ecranul principal pentru acces rapid.</p>
+                            <p>Datele se sincronizează prin Supabase. Pozele de profil, calculatorul și statisticile rămân salvate pe cont.</p>
                         </div>
                     </div>
-
                     <button onclick="window.appActions.logout()" class="w-full bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 font-bold py-4 rounded-2xl transition-colors flex items-center justify-center gap-2">
                         <i class="fas fa-sign-out-alt"></i> Deconectare
                     </button>
@@ -367,265 +481,401 @@
             `;
         };
 
+        const getCalculatorHTML = () => {
+            const buttons = ['7','8','9','÷','4','5','6','×','1','2','3','-','0','.','C','+'];
+            return `
+                <div class="fade-in max-w-sm mx-auto mt-2">
+                    <button onclick="window.appActions.goBack()" class="mb-5 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white transition-colors flex items-center gap-2 font-medium bg-slate-100 dark:bg-slate-800 px-4 py-2 rounded-full w-max">
+                        <i class="fas fa-arrow-left"></i> Înapoi
+                    </button>
+                    <div class="bg-white dark:bg-slate-800 rounded-3xl p-5 shadow-sm border border-slate-100 dark:border-slate-700 mb-5">
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="w-11 h-11 rounded-2xl bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 flex items-center justify-center"><i class="fas fa-calculator"></i></div>
+                            <div>
+                                <h2 class="font-bold text-2xl text-slate-800 dark:text-white">Calculator</h2>
+                                <p class="text-xs text-slate-400">fără tastatura telefonului</p>
+                            </div>
+                        </div>
+                        <div class="bg-slate-50 dark:bg-slate-900 rounded-2xl p-4 mb-4 text-right min-h-[92px] border border-slate-100 dark:border-slate-700">
+                            <p class="text-sm text-slate-400 break-all min-h-[20px]">${calcExpression || '0'}</p>
+                            <p class="text-3xl font-black text-slate-800 dark:text-white break-all">${calcResult}</p>
+                        </div>
+                        <div class="grid grid-cols-4 gap-2 mb-3">
+                            ${buttons.map(b => `<button onclick="window.appActions.calcPress('${b}')" class="py-4 rounded-2xl font-bold ${['÷','×','-','+'].includes(b) ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400' : b === 'C' ? 'bg-red-50 dark:bg-red-900/20 text-red-500' : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-100'}">${b}</button>`).join('')}
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button onclick="window.appActions.calcBackspace()" class="py-3 rounded-2xl font-bold bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-200">Șterge</button>
+                            <button onclick="window.appActions.calcEquals()" class="py-3 rounded-2xl font-bold bg-green-500 hover:bg-green-600 text-white">=</button>
+                        </div>
+                    </div>
+                    <div class="bg-white dark:bg-slate-800 rounded-3xl p-5 shadow-sm border border-slate-100 dark:border-slate-700 mb-5">
+                        <h3 class="font-bold text-lg mb-3 text-slate-800 dark:text-white">Salvează calcul</h3>
+                        <textarea id="calcNoteInput" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl outline-none dark:text-white text-sm mb-3" rows="2" placeholder="Adaugă o notiță..."></textarea>
+                        <button onclick="window.appActions.saveCalculation()" id="saveCalcBtn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl">Salvează Calcul</button>
+                    </div>
+                    <div class="mb-6">
+                        <h3 class="font-bold text-lg mb-3 text-slate-800 dark:text-white">Calcule salvate</h3>
+                        <div class="space-y-3">
+                            ${calculatorHistory.length === 0 ? `<p class="text-center text-slate-400 text-sm py-4">Nu ai calcule salvate.</p>` : calculatorHistory.map(c => `
+                                <div class="bg-white dark:bg-slate-800 rounded-2xl p-4 border border-slate-100 dark:border-slate-700 shadow-sm">
+                                    <div class="flex justify-between gap-3">
+                                        <div>
+                                            <p class="font-bold text-slate-800 dark:text-white">${c.expression} = ${c.result}</p>
+                                            ${c.note ? `<p class="text-sm text-slate-500 dark:text-slate-400 mt-1">${c.note}</p>` : ''}
+                                        </div>
+                                        <span class="text-[10px] text-slate-400 whitespace-nowrap">${new Date(c.created_at).toLocaleDateString('ro-RO')}</span>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+            `;
+        };
+
+        const getGoalStatsHTML = () => {
+            const goal = goals.find(g => g.id === selectedGoalId);
+            if (!goal) return `<div><button onclick="window.appActions.goBack()" class="mb-5 bg-slate-100 dark:bg-slate-800 px-4 py-2 rounded-full"><i class="fas fa-arrow-left mr-2"></i>Înapoi</button><p>Obiectivul nu mai există.</p></div>`;
+            const goalTrans = transactions.filter(t => t.goal_id === goal.id);
+            const added = goalTrans.filter(t => Number(t.amount) > 0).reduce((s, t) => s + Number(t.amount), 0);
+            const removed = goalTrans.filter(t => Number(t.amount) < 0).reduce((s, t) => s + Math.abs(Number(t.amount)), 0);
+            const percent = Math.min(100, Math.round((Number(goal.current || 0) / Number(goal.target || 1)) * 100));
+            const grouped = {};
+            goalTrans.forEach(t => {
+                const d = String(t.date).slice(0, 10);
+                if (!grouped[d]) grouped[d] = [];
+                grouped[d].push(t);
+            });
+            const dates = Object.keys(grouped).sort((a, b) => b.localeCompare(a));
+            return `
+                <div class="fade-in max-w-sm mx-auto mt-2">
+                    <button onclick="window.appActions.goBack()" class="mb-5 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white transition-colors flex items-center gap-2 font-medium bg-slate-100 dark:bg-slate-800 px-4 py-2 rounded-full w-max">
+                        <i class="fas fa-arrow-left"></i> Înapoi
+                    </button>
+                    <div class="bg-white dark:bg-slate-800 rounded-3xl p-5 shadow-sm border border-slate-100 dark:border-slate-700 mb-5">
+                        <p class="text-xs text-slate-400 mb-1">Statistici obiectiv</p>
+                        <h2 class="font-black text-2xl text-slate-800 dark:text-white mb-4">${goal.title}</h2>
+                        <div class="flex justify-between text-sm mb-2">
+                            <span class="font-bold text-slate-700 dark:text-slate-200">${money(goal.current)} RON</span>
+                            <span class="text-slate-400">din ${money(goal.target)} RON</span>
+                        </div>
+                        <div class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-3 mb-2">
+                            <div class="${accentBar(getRole(goal.owner))} h-3 rounded-full transition-all duration-500" style="width:${percent}%"></div>
+                        </div>
+                        <p class="text-right text-xs font-bold text-slate-500">${percent}%</p>
+                    </div>
+                    <div class="grid grid-cols-3 gap-3 mb-5">
+                        <div class="bg-white dark:bg-slate-800 rounded-2xl p-3 border border-slate-100 dark:border-slate-700 text-center">
+                            <p class="text-xs text-slate-400">Pus</p><p class="font-black text-green-500">${money(added)}</p>
+                        </div>
+                        <div class="bg-white dark:bg-slate-800 rounded-2xl p-3 border border-slate-100 dark:border-slate-700 text-center">
+                            <p class="text-xs text-slate-400">Scos</p><p class="font-black text-red-500">${money(removed)}</p>
+                        </div>
+                        <div class="bg-white dark:bg-slate-800 rounded-2xl p-3 border border-slate-100 dark:border-slate-700 text-center">
+                            <p class="text-xs text-slate-400">Mișcări</p><p class="font-black text-slate-800 dark:text-white">${goalTrans.length}</p>
+                        </div>
+                    </div>
+                    <h3 class="font-bold text-lg mb-3 text-slate-800 dark:text-white">Pe zile</h3>
+                    <div class="space-y-3 mb-6">
+                        ${dates.length === 0 ? `<p class="text-center text-slate-400 py-4 text-sm">Nu există încă statistici.</p>` : dates.map(d => {
+                            const list = grouped[d];
+                            const total = list.reduce((s, t) => s + Number(t.amount || 0), 0);
+                            return `
+                                <div class="bg-white dark:bg-slate-800 rounded-2xl p-4 border border-slate-100 dark:border-slate-700 shadow-sm">
+                                    <div class="flex justify-between items-center mb-2">
+                                        <p class="font-bold text-slate-800 dark:text-white capitalize">${formatFullDate(d)}</p>
+                                        <p class="font-black ${total < 0 ? 'text-red-500' : 'text-green-500'}">${total >= 0 ? '+' : ''}${money(total)}</p>
+                                    </div>
+                                    <div class="space-y-2">
+                                        ${list.map(t => getTransactionRow(t)).join('')}
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+            `;
+        };
+
         const getBottomNavHTML = () => {
             const isHome = currentTab === 'home';
             const isProfile = currentTab === 'profile';
-            
             return `
                 <nav class="fixed bottom-0 w-full max-w-md mx-auto bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 flex justify-around items-center h-16 pb-safe z-40 rounded-t-2xl shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
                     <button onclick="window.appActions.switchTab('home')" class="flex flex-col items-center justify-center w-20 h-full ${isHome ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'} transition-colors">
-                        <i class="fas fa-home text-xl mb-1"></i>
-                        <span class="text-[10px] font-semibold">Acasă</span>
+                        <i class="fas fa-home text-xl mb-1"></i><span class="text-[10px] font-semibold">Acasă</span>
                     </button>
-                    
                     <div class="relative -top-6">
                         <button onclick="window.appActions.openAddGoalModal()" class="w-14 h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full flex items-center justify-center text-2xl shadow-lg shadow-indigo-200 dark:shadow-none transition-transform hover:scale-105">
                             <i class="fas fa-plus"></i>
                         </button>
                     </div>
-
                     <button onclick="window.appActions.switchTab('profile')" class="flex flex-col items-center justify-center w-20 h-full ${isProfile ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'} transition-colors">
-                        <i class="fas fa-user text-xl mb-1"></i>
-                        <span class="text-[10px] font-semibold">Profil</span>
+                        <i class="fas fa-user text-xl mb-1"></i><span class="text-[10px] font-semibold">Profil</span>
                     </button>
                 </nav>
             `;
         };
 
-        const getAvatarHtml = (sizeStr) => {
-            const avatarBase64 = localStorage.getItem('userAvatar');
+        const getAvatarHtml = (sizeStr, email = currentUser?.email) => {
+            const profile = email ? getProfile(email) : null;
+            const avatarBase64 = profile?.avatar;
             if (avatarBase64) {
                 return `<img src="${avatarBase64}" class="w-${sizeStr} h-${sizeStr} rounded-full object-cover border-2 border-slate-200 dark:border-slate-600 shadow-sm" alt="Avatar">`;
             }
-            return `
-                <div class="w-${sizeStr} h-${sizeStr} rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 text-white flex items-center justify-center text-${sizeStr > 16 ? '3xl' : 'lg'} font-bold shadow-sm">
-                    ${currentUser.email.charAt(0).toUpperCase()}
-                </div>
-            `;
+            const initial = email ? email.charAt(0).toUpperCase() : '?';
+            const role = email ? getRole(email) : 'sot';
+            return `<div class="w-${sizeStr} h-${sizeStr} rounded-full ${role === 'sotie' ? 'bg-gradient-to-tr from-red-400 to-red-600' : 'bg-gradient-to-tr from-indigo-500 to-purple-500'} text-white flex items-center justify-center text-${sizeStr > 16 ? '3xl' : 'lg'} font-bold shadow-sm">${initial}</div>`;
         };
 
-        const generateGoalCard = (goal, isMine, accent = 'indigo') => {
-            const percent = Math.min(100, Math.round((goal.current / goal.target) * 100));
+        const generateGoalCard = (goal, isMine) => {
+            const role = getRole(goal.owner);
+            const target = Number(goal.target || 1);
+            const current = Number(goal.current || 0);
+            const percent = Math.min(100, Math.round((current / target) * 100));
             const isCompleted = percent >= 100;
-            const bgClass = isMine ? 'bg-slate-50 dark:bg-slate-700/50' : 'bg-white dark:bg-slate-800';
-
+            const btnClass = accentButton(role);
             return `
-                <div class="${bgClass} border border-slate-200 dark:border-slate-600 rounded-xl p-4 relative overflow-hidden">
-                    ${isCompleted ? `<div class="absolute top-0 right-0 bg-green-500 text-white text-[10px] font-bold px-2 py-1 rounded-bl-lg">COMPLET</div>` : ''}
-                    
-                    <div class="flex justify-between items-start mb-2">
-                        <h4 class="font-bold text-slate-800 dark:text-white pr-14 text-sm">${goal.title}</h4>
-                        <div class="text-right">
-                            <span class="text-sm font-bold text-slate-800 dark:text-white">${goal.current}</span>
-                            <span class="text-xs text-slate-500 dark:text-slate-400">/${goal.target}</span>
+                <div onclick="window.appActions.openGoalStats('${goal.id}')" class="goal-card bg-slate-50 dark:bg-slate-700/50 border border-slate-100 dark:border-slate-600 rounded-2xl p-4 relative overflow-hidden cursor-pointer">
+                    ${isCompleted ? `<div class="absolute top-2 right-2 bg-green-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-md leading-none">COMPLET</div>` : ''}
+                    <div class="flex justify-between items-start gap-3 mb-3 pr-12">
+                        <div>
+                            <h4 class="font-bold text-slate-800 dark:text-white text-sm">${goal.title}</h4>
+                            <p class="text-[11px] text-slate-400 mt-0.5">${ownerLabel(goal.owner)}</p>
+                        </div>
+                        <div class="text-right shrink-0">
+                            <span class="text-sm font-bold text-slate-800 dark:text-white">${money(current)}</span>
+                            <span class="text-xs text-slate-500 dark:text-slate-400">/${money(target)}</span>
                         </div>
                     </div>
-                    
                     <div class="w-full bg-slate-200 dark:bg-slate-600 rounded-full h-2 mb-3">
-                        <div class="bg-${isCompleted ? 'green' : accent}-500 h-2 rounded-full transition-all duration-500" style="width: ${percent}%"></div>
+                        <div class="${isCompleted ? 'bg-green-500' : accentBar(role)} h-2 rounded-full transition-all duration-500" style="width: ${percent}%"></div>
                     </div>
-                    
-                    <div class="flex justify-between items-center">
+                    <div class="flex justify-between items-center gap-2">
                         <span class="text-xs font-medium text-slate-500 dark:text-slate-400">${percent}%</span>
-                        ${!isMine && !isCompleted ? `
-                            <button onclick="window.appActions.openGiftModal('${goal.id}', '${goal.title}')" class="text-xs bg-${accent}-600 hover:bg-${accent}-700 text-white px-3 py-1.5 rounded-lg shadow-sm font-medium">
-                                Oferă
-                            </button>
-                        ` : ''}
+                        <div class="flex gap-2">
+                            ${isMine ? `
+                                <button onclick="event.stopPropagation(); window.appActions.openMoneyModal('${goal.id}', 'add_self')" class="text-xs ${btnClass} px-3 py-1.5 rounded-lg shadow-sm font-medium">Pune</button>
+                                <button onclick="event.stopPropagation(); window.appActions.openMoneyModal('${goal.id}', 'remove_self')" class="text-xs bg-slate-200 hover:bg-slate-300 dark:bg-slate-600 dark:hover:bg-slate-500 text-slate-700 dark:text-white px-3 py-1.5 rounded-lg shadow-sm font-medium">Scoate</button>
+                            ` : (!isCompleted ? `
+                                <button onclick="event.stopPropagation(); window.appActions.openMoneyModal('${goal.id}', 'gift')" class="text-xs ${btnClass} px-3 py-1.5 rounded-lg shadow-sm font-medium">Oferă</button>
+                            ` : '')}
+                        </div>
                     </div>
                 </div>
             `;
         };
 
-        // Actions & Modals globally available
+        const showConfetti = () => {
+            const root = document.getElementById('confettiRoot');
+            const colors = ['#22c55e', '#6366f1', '#ef4444', '#f59e0b', '#06b6d4'];
+            for (let i = 0; i < 42; i++) {
+                const piece = document.createElement('div');
+                piece.className = 'confetti-piece';
+                piece.style.left = Math.random() * 100 + 'vw';
+                piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+                piece.style.animationDelay = (Math.random() * 0.25) + 's';
+                piece.style.transform = `rotate(${Math.random() * 180}deg)`;
+                root.appendChild(piece);
+                setTimeout(() => piece.remove(), 1800);
+            }
+        };
+
         window.appActions = {
             selectRole: (role) => {
                 window.selectedSignupRole = role;
                 const btnSot = document.getElementById('btnRoleSot');
                 const btnSotie = document.getElementById('btnRoleSotie');
+                if (!btnSot || !btnSotie) return;
                 if (role === 'sot') {
                     btnSot.className = "flex-1 py-3 rounded-xl font-bold border-2 transition-all border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400";
                     btnSotie.className = "flex-1 py-3 rounded-xl font-bold border-2 transition-all border-slate-200 dark:border-slate-700 text-slate-500";
                 } else {
-                    btnSotie.className = "flex-1 py-3 rounded-xl font-bold border-2 transition-all border-rose-500 bg-rose-50 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400";
+                    btnSotie.className = "flex-1 py-3 rounded-xl font-bold border-2 transition-all border-red-500 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400";
                     btnSot.className = "flex-1 py-3 rounded-xl font-bold border-2 transition-all border-slate-200 dark:border-slate-700 text-slate-500";
                 }
             },
             toggleAuthMode: (isLogin) => renderAuth(isLogin),
-            switchTab: (tab) => { currentTab = tab; renderMain(); },
+            switchTab: (tab) => { previousTab = currentTab; currentTab = tab; renderMain(); },
+            goBack: () => { currentTab = previousTab && previousTab !== currentTab ? previousTab : 'home'; renderMain(); },
+            openCalculator: () => { previousTab = currentTab; currentTab = 'calculator'; renderMain(); },
+            openGoalStats: (goalId) => { selectedGoalId = goalId; previousTab = currentTab; currentTab = 'goalStats'; renderMain(); },
             changeDate: (date) => { selectedDate = date; renderMain(); },
+            shiftDate: (days) => { selectedDate = addDays(selectedDate, days); renderMain(); },
+            calendarTouchStart: (e) => { touchStartX = e.changedTouches[0].screenX; },
+            calendarTouchEnd: (e) => {
+                const diff = e.changedTouches[0].screenX - touchStartX;
+                if (Math.abs(diff) > 45) window.appActions.shiftDate(diff < 0 ? 1 : -1);
+            },
             closeModal: () => { document.getElementById('modalContainer').innerHTML = ''; },
-            
             toggleTheme: () => {
                 const html = document.documentElement;
-                if (html.classList.contains('dark')) {
-                    html.classList.remove('dark');
-                    localStorage.setItem('appTheme', 'light');
-                } else {
-                    html.classList.add('dark');
-                    localStorage.setItem('appTheme', 'dark');
-                }
+                const dark = html.classList.toggle('dark');
+                localStorage.setItem('appTheme', dark ? 'dark' : 'light');
             },
-
             uploadAvatar: (e) => {
                 const file = e.target.files[0];
-                if (file) {
-                    const reader = new FileReader();
-                    reader.onload = (e) => {
-                        localStorage.setItem('userAvatar', e.target.result);
-                        renderMain(); // Refresh to show new avatar
-                    };
-                    reader.readAsDataURL(file);
+                if (!file || !currentUser) return;
+                if (file.size > 900000) {
+                    alert('Poza e cam mare. Alege una mai mică sau fă screenshot/crop.');
+                    return;
                 }
+                const reader = new FileReader();
+                reader.onload = async (ev) => {
+                    const avatar = ev.target.result;
+                    const role = getRole(currentUser.email);
+                    const { error } = await supabase.from('profiles').upsert({
+                        id: currentUser.id,
+                        email: currentUser.email,
+                        role,
+                        avatar
+                    }, { onConflict: 'id' });
+                    if (error) return alert('Eroare la salvarea pozei: ' + error.message);
+                    const localProfile = getProfile(currentUser.email);
+                    if (localProfile) localProfile.avatar = avatar;
+                    else profiles.push({ id: currentUser.id, email: currentUser.email, role, avatar });
+                    renderMain();
+                };
+                reader.readAsDataURL(file);
             },
-
             handleAuth: async (isLogin) => {
                 const email = document.getElementById('emailInput').value.trim();
                 const password = document.getElementById('passInput').value;
                 const btn = document.getElementById('authBtn');
-                
                 if (!email || !password) { alert('Completează ambele câmpuri!'); return; }
-                
                 btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Se procesează...';
                 btn.disabled = true;
-
                 try {
                     let err;
                     if (isLogin) {
                         const { error } = await supabase.auth.signInWithPassword({ email, password });
                         err = error;
                     } else {
-                        const { error } = await supabase.auth.signUp({ 
-                            email, 
-                            password,
-                            options: {
-                                data: {
-                                    role: window.selectedSignupRole
-                                }
-                            }
-                        });
+                        const { data, error } = await supabase.auth.signUp({ email, password, options: { data: { role: window.selectedSignupRole } } });
                         err = error;
+                        if (!error && data?.user) {
+                            await supabase.from('profiles').upsert({ id: data.user.id, email, role: window.selectedSignupRole }, { onConflict: 'id' });
+                        }
                     }
-
                     if (err) throw err;
-                    // Auth state change listener will handle the rest
                 } catch (error) {
-                    alert("Eroare: " + (error.message || "Date incorecte."));
+                    alert('Eroare: ' + (error.message || 'Date incorecte.'));
                     btn.innerHTML = isLogin ? 'Conectare' : 'Creează Cont';
                     btn.disabled = false;
                 }
             },
-
-            logout: async () => {
-                await supabase.auth.signOut();
-            },
-
+            logout: async () => { await supabase.auth.signOut(); },
             openAddGoalModal: () => {
                 document.getElementById('modalContainer').innerHTML = `
                     <div class="fixed inset-0 modal-backdrop flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
                         <div class="bg-white dark:bg-slate-800 rounded-t-3xl sm:rounded-3xl shadow-xl w-full max-w-md p-6 fade-in relative transition-colors">
                             <div class="w-12 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full mx-auto mb-6 sm:hidden"></div>
-                            <button onclick="window.appActions.closeModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-white hidden sm:block">
-                                <i class="fas fa-times text-xl"></i>
-                            </button>
+                            <button onclick="window.appActions.closeModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-white hidden sm:block"><i class="fas fa-times text-xl"></i></button>
                             <h3 class="text-xl font-bold mb-4 text-slate-800 dark:text-white">Adaugă Obiectiv</h3>
-                            
                             <div class="space-y-4">
-                                <div>
-                                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Titlu (ex. Laptop)</label>
-                                    <input type="text" id="goalTitleInput" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none dark:text-white">
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Suma necesară (RON)</label>
-                                    <input type="number" id="goalTargetInput" min="1" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none dark:text-white">
-                                </div>
-                                <div class="flex gap-3 pt-2">
-                                    <button onclick="window.appActions.closeModal()" class="flex-1 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold py-3 rounded-xl">Anulează</button>
-                                    <button onclick="window.appActions.saveGoal()" id="saveGoalBtn" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition-colors">Salvează</button>
-                                </div>
+                                <div><label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Titlu</label><input type="text" id="goalTitleInput" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none dark:text-white" placeholder="ex. Vacanță"></div>
+                                <div><label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Suma necesară (RON)</label><input type="number" id="goalTargetInput" min="1" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none dark:text-white"></div>
+                                <div class="flex gap-3 pt-2"><button onclick="window.appActions.closeModal()" class="flex-1 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold py-3 rounded-xl">Anulează</button><button onclick="window.appActions.saveGoal()" id="saveGoalBtn" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition-colors">Salvează</button></div>
                             </div>
                         </div>
                     </div>
                 `;
             },
-
             saveGoal: async () => {
                 const title = document.getElementById('goalTitleInput').value.trim();
                 const target = parseFloat(document.getElementById('goalTargetInput').value);
-
                 if (!title || isNaN(target) || target <= 0) return alert('Date invalide!');
-
                 const btn = document.getElementById('saveGoalBtn');
                 btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; btn.disabled = true;
-
-                const { error } = await supabase.from('goals').insert([{ title, target, current: 0, owner: currentUser.email }]);
-                
+                const newGoal = { title, target, current: 0, owner: currentUser.email };
+                const { data, error } = await supabase.from('goals').insert([newGoal]).select().single();
                 if (error) {
-                    alert("Eroare la adăugare: " + error.message + "\n\n(Dacă e prima dată când folosești aplicația, asigură-te că ai creat tabelele în Supabase din SQL Editor)");
-                    btn.innerHTML = 'Salvează';
-                    btn.disabled = false;
-                    return;
+                    alert('Eroare la adăugare: ' + error.message);
+                    btn.innerHTML = 'Salvează'; btn.disabled = false; return;
                 }
-
-                await fetchData(); // Actualizam interfata instantaneu
+                if (data) goals.unshift(data);
                 window.appActions.closeModal();
+                renderMain();
+                fetchData();
             },
-
-            openGiftModal: (goalId, goalTitle) => {
+            openMoneyModal: (goalId, mode) => {
+                const goal = goals.find(g => g.id === goalId);
+                if (!goal) return;
+                const title = mode === 'remove_self' ? 'Scoate bani' : mode === 'gift' ? 'Oferă bani' : 'Pune bani';
+                const btnTitle = mode === 'remove_self' ? 'Scoate' : mode === 'gift' ? 'Oferă' : 'Pune';
+                const btnClass = mode === 'remove_self' ? 'bg-slate-700 hover:bg-slate-800 text-white' : 'bg-green-500 hover:bg-green-600 text-white';
                 document.getElementById('modalContainer').innerHTML = `
                     <div class="fixed inset-0 modal-backdrop flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
                         <div class="bg-white dark:bg-slate-800 rounded-t-3xl sm:rounded-3xl shadow-xl w-full max-w-md p-6 fade-in relative">
                             <div class="w-12 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full mx-auto mb-6 sm:hidden"></div>
-                            <h3 class="text-xl font-bold mb-1 text-slate-800 dark:text-white">Pune Bani</h3>
-                            <p class="text-sm text-slate-500 dark:text-slate-400 mb-5">Pentru "${goalTitle}"</p>
-                            
+                            <h3 class="text-xl font-bold mb-1 text-slate-800 dark:text-white">${title}</h3>
+                            <p class="text-sm text-slate-500 dark:text-slate-400 mb-5">Pentru „${goal.title}”</p>
                             <div class="space-y-4">
-                                <div class="relative">
-                                    <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-500 font-medium">RON</span>
-                                    <input type="number" id="giftAmountInput" min="1" class="w-full pl-14 pr-4 py-4 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl outline-none text-xl font-bold text-slate-800 dark:text-white" placeholder="0">
-                                </div>
-                                <div class="flex gap-3 pt-2">
-                                    <button onclick="window.appActions.closeModal()" class="flex-1 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold py-3 rounded-xl">Anulează</button>
-                                    <button onclick="window.appActions.sendGift('${goalId}')" id="sendGiftBtn" class="flex-1 bg-green-500 hover:bg-green-600 text-white font-bold py-3 rounded-xl transition-colors">Trimite</button>
-                                </div>
+                                <div class="relative"><span class="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-500 font-medium">RON</span><input type="number" id="moneyAmountInput" min="1" class="w-full pl-14 pr-4 py-4 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl outline-none text-xl font-bold text-slate-800 dark:text-white" placeholder="0"></div>
+                                <div class="flex gap-3 pt-2"><button onclick="window.appActions.closeModal()" class="flex-1 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold py-3 rounded-xl">Anulează</button><button onclick="window.appActions.applyMoney('${goalId}', '${mode}')" id="moneyActionBtn" class="flex-1 ${btnClass} font-bold py-3 rounded-xl transition-colors">${btnTitle}</button></div>
                             </div>
                         </div>
                     </div>
                 `;
             },
-
-            sendGift: async (goalId) => {
-                const amount = parseFloat(document.getElementById('giftAmountInput').value);
-                if (isNaN(amount) || amount <= 0) return alert('Sumă invalidă!');
-
+            applyMoney: async (goalId, mode) => {
+                const amountRaw = parseFloat(document.getElementById('moneyAmountInput').value);
+                if (isNaN(amountRaw) || amountRaw <= 0) return alert('Sumă invalidă!');
                 const goal = goals.find(g => g.id === goalId);
                 if (!goal) return;
-
-                const btn = document.getElementById('sendGiftBtn');
+                if (mode === 'remove_self' && goal.owner !== currentUser.email) return alert('Poți scoate bani doar din obiectivul tău.');
+                const signedAmount = mode === 'remove_self' ? -amountRaw : amountRaw;
+                const oldAmount = Number(goal.current || 0);
+                const newAmount = Math.max(0, oldAmount + signedAmount);
+                const btn = document.getElementById('moneyActionBtn');
                 btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; btn.disabled = true;
-
-                const newAmount = Number(goal.current) + amount;
-                
                 const { error: updateError } = await supabase.from('goals').update({ current: newAmount }).eq('id', goalId);
-                
-                if (updateError) {
-                    alert("Eroare la trimitere: " + updateError.message);
-                    window.appActions.closeModal();
-                    return;
-                }
-                
-                await supabase.from('transactions').insert([{
-                    goal_id: goalId, goal_title: goal.title, amount: amount,
-                    from_role: currentUser.email, to_role: goal.owner,
-                    date: new Date().toISOString().split('T')[0], timestamp: new Date().toISOString()
+                if (updateError) { alert('Eroare: ' + updateError.message); window.appActions.closeModal(); return; }
+                const { error: transError } = await supabase.from('transactions').insert([{
+                    goal_id: goalId,
+                    goal_title: goal.title,
+                    amount: signedAmount,
+                    from_role: currentUser.email,
+                    to_role: goal.owner,
+                    date: todayISO(),
+                    timestamp: new Date().toISOString()
                 }]);
-
-                await fetchData(); // Actualizam interfata instantaneu dupa ce am dat banii
+                if (transError) console.error('transaction insert', transError);
+                goal.current = newAmount;
                 window.appActions.closeModal();
+                renderMain();
+                if (oldAmount < Number(goal.target || 0) && newAmount >= Number(goal.target || 0)) showConfetti();
+                fetchData();
+            },
+            calcPress: (v) => {
+                if (v === 'C') { calcExpression = ''; calcResult = '0'; renderMain(); return; }
+                const value = v === '×' ? '*' : v === '÷' ? '/' : v;
+                calcExpression += value;
+                renderMain();
+            },
+            calcBackspace: () => { calcExpression = calcExpression.slice(0, -1); renderMain(); },
+            calcEquals: () => {
+                try {
+                    if (!calcExpression || !/^[0-9+\-*/().\s]+$/.test(calcExpression)) throw new Error('Calcul invalid');
+                    const result = Function('"use strict"; return (' + calcExpression + ')')();
+                    if (!Number.isFinite(Number(result))) throw new Error('Rezultat invalid');
+                    calcResult = String(Math.round(Number(result) * 100) / 100);
+                } catch (error) {
+                    calcResult = 'Eroare';
+                }
+                renderMain();
+            },
+            saveCalculation: async () => {
+                if (!calcExpression || calcResult === '0' || calcResult === 'Eroare') return alert('Fă întâi un calcul valid.');
+                const note = document.getElementById('calcNoteInput')?.value?.trim() || '';
+                const btn = document.getElementById('saveCalcBtn');
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; btn.disabled = true;
+                const { error } = await supabase.from('calculator_history').insert([{ user_email: currentUser.email, expression: calcExpression, result: calcResult, note }]);
+                if (error) { alert('Eroare la salvare: ' + error.message); btn.innerHTML = 'Salvează Calcul'; btn.disabled = false; return; }
+                await fetchData();
             }
         };
 
-        // Start App
         checkAuth().catch((error) => {
             console.error('Start app error:', error);
             appContainer.innerHTML = `
@@ -639,7 +889,6 @@
                 </div>
             `;
         });
-
     </script>
 </body>
 </html>
