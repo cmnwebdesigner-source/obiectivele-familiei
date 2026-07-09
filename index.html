@@ -1321,6 +1321,9 @@
         restored.scrollTop = scrollTop;
         requestAnimationFrame(() => { const again = app.querySelector('.screen'); if (again) again.scrollTop = scrollTop; });
       }
+      if (currentPage === 'flappyGame') {
+        requestAnimationFrame(() => setupFlappyGameView());
+      }
     }
 
     function avatarHTML(email = currentUser?.email, large = false) {
@@ -2023,26 +2026,53 @@
       if (!room || inviteModalRoomId === room.id) return;
       if (modal.innerHTML.trim()) return;
       inviteModalRoomId = room.id;
-      modal.innerHTML = `<div class="invite-banner">
-        <div class="flex items-start justify-between gap-3 mb-3">
-          <div><p class="text-sm" style="color:var(--text)">Invitație Flappy duel</p><p class="text-xs muted mt-1">${escapeHTML(gamePersonLabel(room.creator_email))} te provoacă pe ${money(room.bet_amount)} RON.</p></div>
-          <span class="game-pill wait">Joc</span>
+      modal.innerHTML = `<div class="fixed inset-0 z-[90] flex items-center justify-center p-4" style="background:rgba(15,23,42,.48);backdrop-filter:blur(10px);">
+        <div class="card w-full max-w-sm" style="padding:18px;border-radius:28px;box-shadow:0 28px 70px rgba(15,23,42,.28);">
+          <div class="flex items-center gap-3 mb-4">
+            <span class="icon-btn">${svg.gamepad}</span>
+            <div class="min-w-0">
+              <p class="muted text-xs">Invitație joc</p>
+              <h3 class="text-xl font-medium tracking-[-.03em]">Flappy Duel</h3>
+            </div>
+          </div>
+          <p class="text-sm muted mb-4">${escapeHTML(gamePersonLabel(room.creator_email))} te provoacă la un pariu de <span style="color:var(--text)">${money(room.bet_amount)} RON</span>.</p>
+          <div class="grid grid-cols-2 gap-2">
+            <button class="btn btn-soft btn-full" onclick="window.appActions.respondFlappyInvite('${room.id}', false)">Refuză</button>
+            <button class="btn btn-gold btn-full" onclick="window.appActions.respondFlappyInvite('${room.id}', true)">Acceptă</button>
+          </div>
         </div>
-        <div class="grid grid-cols-2 gap-2"><button class="btn btn-soft btn-full" onclick="window.appActions.respondFlappyInvite('${room.id}', false)">Refuză</button><button class="btn btn-gold btn-full" onclick="window.appActions.respondFlappyInvite('${room.id}', true)">Acceptă</button></div>
       </div>`;
     }
 
     function handleGameRealtimeState(rendered) {
       const active = gameRoomsForMe().find(r => ['countdown','playing'].includes(r.status));
-      if (active && active.id !== lastAutoGameRoomId) {
-        lastAutoGameRoomId = active.id;
+      if (active) {
+        const shouldOpenGame = currentPage !== 'flappyGame' || selectedGameRoomId !== active.id;
         selectedGameRoomId = active.id;
-        if (currentPage === 'home' || currentPage === 'games' || currentPage === 'flappyLobby') {
-          currentPage = 'flappyGame';
+        lastAutoGameRoomId = active.id;
+        if (shouldOpenGame) {
           previousPage = 'games';
-          if (!rendered) renderApp(true);
+          currentPage = 'flappyGame';
+          renderApp(true);
+          return;
         }
       }
+
+      const acceptedForCreator = gameRoomsForMe().find(r => r.status === 'accepted' && r.creator_email === currentUser?.email);
+      if (acceptedForCreator && currentPage !== 'flappyLobby' && currentPage !== 'flappyGame') {
+        selectedGameRoomId = acceptedForCreator.id;
+        previousPage = 'games';
+        currentPage = 'flappyLobby';
+        renderApp(true);
+        return;
+      }
+
+      const selected = selectedGameRoomId ? gameRooms.find(r => r.id === selectedGameRoomId) : null;
+      if (currentPage === 'flappyGame' && selected?.status === 'finished') {
+        updateGameLiveDom();
+        return;
+      }
+
       updateGameLiveDom();
     }
 
@@ -2070,7 +2100,7 @@
           const count = document.getElementById('flappyCount');
           const msg = document.getElementById('flappyMessage');
           if (count) count.textContent = left > 0 ? String(left) : 'Start';
-          if (msg) msg.textContent = left > 0 ? 'Jocul începe imediat' : 'Pornește!';
+          if (msg) msg.textContent = left > 0 ? 'Pornește în ' + left + ' secunde' : 'Pornește!';
           if (left <= 0) {
             clearInterval(flappyCountdownTimer);
             await supabase.from('game_rooms').update({ status:'playing' }).eq('id', room.id).neq('status','finished');
@@ -2690,7 +2720,7 @@
         if (room.creator_email !== currentUser.email) return alert('Doar cel care a trimis invitația pornește jocul.');
         if (room.status !== 'accepted') return alert('Jocul nu este acceptat încă.');
         try {
-          const startAt = new Date(Date.now() + 3800).toISOString();
+          const startAt = new Date(Date.now() + 3200).toISOString();
           const scores = { [room.creator_email]:0, [room.opponent_email]:0 };
           const { data, error } = await supabase.from('game_rooms').update({ status:'countdown', start_at:startAt, scores, finished_players:{} }).eq('id', id).select('*').maybeSingle();
           if (error) throw error;
