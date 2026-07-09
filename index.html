@@ -73,6 +73,7 @@
         let selectedDate = new Date().toISOString().split('T')[0];
         let realTimeSubscription = null;
         let deferredPrompt = null;
+        window.selectedSignupRole = 'sot'; // Pentru a retine rolul ales la inregistrare
 
         const appContainer = document.getElementById('app');
 
@@ -160,6 +161,16 @@
 
         // UI Renders
         const renderAuth = (isLogin = true) => {
+            const roleSelector = isLogin ? '' : `
+                <div class="mb-4 fade-in">
+                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Alege Profilul:</label>
+                    <div class="flex gap-3">
+                        <button type="button" id="btnRoleSot" onclick="window.appActions.selectRole('sot')" class="flex-1 py-3 rounded-xl font-bold border-2 transition-all border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400">👨 Soțul</button>
+                        <button type="button" id="btnRoleSotie" onclick="window.appActions.selectRole('sotie')" class="flex-1 py-3 rounded-xl font-bold border-2 transition-all border-slate-200 dark:border-slate-700 text-slate-500">👩 Soția</button>
+                    </div>
+                </div>
+            `;
+
             appContainer.innerHTML = `
                 <div class="flex-1 flex flex-col justify-center px-6 py-12 fade-in min-h-screen bg-white dark:bg-slate-900">
                     <div class="text-center mb-10">
@@ -171,8 +182,9 @@
                     </div>
 
                     <div class="space-y-4 w-full">
+                        ${roleSelector}
                         <div>
-                            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Email (Fațadă)</label>
+                            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Email</label>
                             <input type="email" id="emailInput" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none dark:text-white" placeholder="tu@familie.ro">
                         </div>
                         <div>
@@ -213,11 +225,17 @@
             const todaysTransactions = transactions.filter(t => t.date === selectedDate);
             const totalAddedToday = todaysTransactions.reduce((sum, t) => sum + Number(t.amount), 0);
 
+            const myRole = currentUser.user_metadata?.role || 'sot';
+            const partnerRoleName = myRole === 'sot' ? 'Soției' : 'Soțului';
+            const myRoleName = myRole === 'sot' ? 'Soțul' : 'Soția';
+            const partnerAccent = myRole === 'sot' ? 'rose' : 'indigo';
+            const myAccent = myRole === 'sot' ? 'indigo' : 'rose';
+
             return `
                 <!-- Header -->
                 <header class="flex justify-between items-center mb-6">
                     <div>
-                        <h2 class="font-bold text-slate-800 dark:text-white text-2xl">Salutare! 👋</h2>
+                        <h2 class="font-bold text-slate-800 dark:text-white text-2xl">Salut, ${myRoleName}! 👋</h2>
                         <p class="text-sm text-slate-500 dark:text-slate-400">Situația obiectivelor voastre</p>
                     </div>
                     ${getAvatarHtml(12)}
@@ -225,18 +243,18 @@
 
                 <div class="space-y-6">
                     <!-- My Goals -->
-                    <section class="bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-sm border border-slate-100 dark:border-slate-700">
+                    <section class="bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-sm border border-slate-100 dark:border-slate-700 border-t-4 border-t-${myAccent}-500">
                         <h3 class="font-bold text-lg text-slate-800 dark:text-white mb-4 border-b border-slate-100 dark:border-slate-700 pb-2">Obiectivele Mele</h3>
                         <div class="space-y-4">
-                            ${myGoals.length === 0 ? `<p class="text-center text-sm text-slate-400 py-4">Niciun obiectiv adăugat.</p>` : myGoals.map(g => generateGoalCard(g, true)).join('')}
+                            ${myGoals.length === 0 ? `<p class="text-center text-sm text-slate-400 py-4">Niciun obiectiv adăugat.</p>` : myGoals.map(g => generateGoalCard(g, true, myAccent)).join('')}
                         </div>
                     </section>
 
                     <!-- Partner's Goals -->
-                    <section class="bg-indigo-50 dark:bg-indigo-900/20 rounded-2xl p-5 shadow-sm border border-indigo-100 dark:border-indigo-500/30">
-                        <h3 class="font-bold text-lg text-indigo-900 dark:text-indigo-300 mb-4 border-b border-indigo-100 dark:border-indigo-500/30 pb-2">Obiectivele Partenerului</h3>
+                    <section class="bg-${partnerAccent}-50 dark:bg-${partnerAccent}-900/20 rounded-2xl p-5 shadow-sm border border-${partnerAccent}-100 dark:border-${partnerAccent}-500/30 border-t-4 border-t-${partnerAccent}-500">
+                        <h3 class="font-bold text-lg text-${partnerAccent}-900 dark:text-${partnerAccent}-300 mb-4 border-b border-${partnerAccent}-100 dark:border-${partnerAccent}-500/30 pb-2">Obiectivele ${partnerRoleName}</h3>
                         <div class="space-y-4">
-                            ${partnerGoals.length === 0 ? `<p class="text-center text-sm text-indigo-400 py-4">Partenerul nu are obiective.</p>` : partnerGoals.map(g => generateGoalCard(g, false, 'indigo')).join('')}
+                            ${partnerGoals.length === 0 ? `<p class="text-center text-sm text-${partnerAccent}-400 py-4">Partenerul nu are obiective.</p>` : partnerGoals.map(g => generateGoalCard(g, false, partnerAccent)).join('')}
                         </div>
                     </section>
 
@@ -273,6 +291,9 @@
 
         const getProfileHTML = () => {
             const isDark = document.documentElement.classList.contains('dark');
+            const myRole = currentUser.user_metadata?.role || 'sot';
+            const myRoleName = myRole === 'sot' ? '👨 Cont Soț' : '👩 Cont Soție';
+
             return `
                 <div class="fade-in max-w-sm mx-auto mt-4">
                     <h2 class="font-bold text-2xl text-slate-800 dark:text-white mb-6 text-center">Setări Profil</h2>
@@ -286,7 +307,7 @@
                             </div>
                             <input type="file" accept="image/*" class="hidden" onchange="window.appActions.uploadAvatar(event)">
                         </label>
-                        <h3 class="mt-4 font-bold text-lg dark:text-white">Contul Tău</h3>
+                        <h3 class="mt-4 font-bold text-lg dark:text-white">${myRoleName}</h3>
                         <p class="text-sm text-slate-500 dark:text-slate-400">${currentUser.email}</p>
                     </div>
 
@@ -387,6 +408,18 @@
 
         // Actions & Modals globally available
         window.appActions = {
+            selectRole: (role) => {
+                window.selectedSignupRole = role;
+                const btnSot = document.getElementById('btnRoleSot');
+                const btnSotie = document.getElementById('btnRoleSotie');
+                if (role === 'sot') {
+                    btnSot.className = "flex-1 py-3 rounded-xl font-bold border-2 transition-all border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400";
+                    btnSotie.className = "flex-1 py-3 rounded-xl font-bold border-2 transition-all border-slate-200 dark:border-slate-700 text-slate-500";
+                } else {
+                    btnSotie.className = "flex-1 py-3 rounded-xl font-bold border-2 transition-all border-rose-500 bg-rose-50 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400";
+                    btnSot.className = "flex-1 py-3 rounded-xl font-bold border-2 transition-all border-slate-200 dark:border-slate-700 text-slate-500";
+                }
+            },
             toggleAuthMode: (isLogin) => renderAuth(isLogin),
             switchTab: (tab) => { currentTab = tab; renderMain(); },
             changeDate: (date) => { selectedDate = date; renderMain(); },
@@ -431,7 +464,15 @@
                         const { error } = await supabase.auth.signInWithPassword({ email, password });
                         err = error;
                     } else {
-                        const { error } = await supabase.auth.signUp({ email, password });
+                        const { error } = await supabase.auth.signUp({ 
+                            email, 
+                            password,
+                            options: {
+                                data: {
+                                    role: window.selectedSignupRole
+                                }
+                            }
+                        });
                         err = error;
                     }
 
