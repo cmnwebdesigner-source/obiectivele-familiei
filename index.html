@@ -745,13 +745,20 @@
       overflow:hidden;
     }
     .top-piggy {
+      width:46px;
+      height:46px;
       display:flex;
       align-items:center;
-      gap:10px;
-      min-width:0;
-      max-width: 168px;
-      flex-shrink:1;
+      justify-content:center;
+      flex:0 0 auto;
+      cursor:pointer;
+      background:transparent;
+      border:0;
+      padding:0;
+      color:inherit;
+      transition:transform .14s ease;
     }
+    .top-piggy:active { transform:scale(.94); }
     .top-game-btn {
       width:46px;
       height:46px;
@@ -872,8 +879,6 @@
     .milestone-chip.done { color:#15803d; background:rgba(22,163,74,.11); border-color:rgba(22,163,74,.16); }
     .milestone-chip.next { color:#1d4ed8; background:rgba(37,99,235,.10); border-color:rgba(37,99,235,.16); }
 
-    .top-piggy { cursor:pointer; background:transparent; border:0; padding:0; text-align:left; color:inherit; }
-    .top-piggy:active { transform:scale(.985); }
     .piggy-page-card {
       border-radius:30px;
       padding:18px;
@@ -1198,9 +1203,14 @@
         return;
       }
       refreshTimer = setTimeout(() => {
-        const quietPages = currentPage === 'home' || currentPage === 'moneyHistory';
-        fetchData({ soft: !quietPages ? true : false, render: !quietPages ? true : false });
-      }, 700);
+        // Nu redesenăm paginile sensibile, ca să nu se vadă saltul la refresh.
+        const quietPages = ['home', 'moneyHistory', 'calendar', 'calculator'].includes(currentPage);
+        if (quietPages) {
+          fetchData({ render: false });
+        } else {
+          fetchData({ soft: true, render: true });
+        }
+      }, 900);
     }
 
     function renderApp(soft = false) {
@@ -1275,10 +1285,6 @@
           <div class="top-feature-row">
             <button class="top-piggy" onclick="window.appActions.openPiggy()" aria-label="Deschide pușculița">
               <div class="piggy-icon-box">${svg.pig}</div>
-              <div class="min-w-0">
-                <p class="piggy-head-label">Pușculiță</p>
-                <p class="piggy-head-value">${money(piggy)} RON</p>
-              </div>
             </button>
             <button class="top-game-btn" onclick="window.appActions.openGames()" aria-label="Jocuri">${svg.gamepad}</button>
           </div>
@@ -1633,7 +1639,7 @@
         <div class="calc-grid mb-4">${keys.map(k => `<button class="calc-key ${['÷','×','-','+'].includes(k) ? 'op' : k==='C' ? 'clear' : ''}" onclick="window.appActions.calcPress('${k}')">${k}</button>`).join('')}</div>
         <div class="grid grid-cols-2 gap-2 mb-4"><button class="btn btn-soft btn-full" onclick="window.appActions.calcBack()">Șterge</button><button class="btn btn-gold btn-full" onclick="window.appActions.calcEquals()">=</button></div>
         <div class="card mb-4"><p class="label">Notiță</p><textarea id="calcNoteInput" class="input" rows="2" placeholder="Pentru ce e calculul?"></textarea><button id="saveCalcBtn" class="btn btn-gold btn-full mt-3" onclick="window.appActions.saveCalc()">Salvează Calcul</button></div>
-        <div class="section"><div class="section-head"><span>Calcule salvate</span>${calculatorHistory.length ? `<button class="clear-history-btn" onclick="window.appActions.clearCalculatorHistory()">Șterge istoric</button>` : `<small>0</small>`}</div><div class="space-y-2">${calculatorHistory.length ? calculatorHistory.map(c => `<div class="card"><p class="text-sm">${escapeHTML(c.expression)} = ${escapeHTML(c.result)}</p>${c.note ? `<p class="text-xs muted mt-1">${escapeHTML(c.note)}</p>` : ''}</div>`).join('') : emptyHTML('Nu ai calcule salvate.')}</div></div>`;
+        <div class="section"><div class="section-head"><span>Calcule salvate</span>${calculatorHistory.length ? `<button class="clear-history-btn" onclick="window.appActions.clearCalculatorHistory()">Șterge istoric</button>` : `<small>0</small>`}</div><div id="calculatorHistoryList" class="space-y-2">${calculatorHistory.length ? calculatorHistory.map(c => `<div class="card"><p class="text-sm">${escapeHTML(c.expression)} = ${escapeHTML(c.result)}</p>${c.note ? `<div class="mt-2 rounded-xl px-3 py-2" style="background:rgba(212,175,55,.12); border:1px solid rgba(212,175,55,.22)"><p class="text-[10px] uppercase tracking-[.12em]" style="color:var(--gold)">Notiță</p><p class="text-xs mt-1" style="color:var(--text)">${escapeHTML(c.note)}</p></div>` : ''}</div>`).join('') : emptyHTML('Nu ai calcule salvate.')}</div></div>`;
     }
 
     function statsHTML() {
@@ -2332,7 +2338,29 @@
       calcPress(v) { if (v === 'C') { calcExpression=''; calcResult='0'; renderApp(); return; } calcExpression += v === '×' ? '*' : v === '÷' ? '/' : v; renderApp(); },
       calcBack() { calcExpression = calcExpression.slice(0,-1); renderApp(); },
       calcEquals() { try { if (!/^[0-9+\-*/().\s]+$/.test(calcExpression)) throw new Error(); const r = Function('"use strict";return ('+calcExpression+')')(); calcResult = Number.isFinite(Number(r)) ? String(Math.round(Number(r)*100)/100) : 'Eroare'; } catch { calcResult='Eroare'; } renderApp(); },
-      async saveCalc() { if (!calcExpression || calcResult === '0' || calcResult === 'Eroare') return alert('Fă întâi un calcul valid.'); const note = document.getElementById('calcNoteInput')?.value.trim() || ''; const { error } = await supabase.from('calculator_history').insert([{ user_email:currentUser.email, expression:calcExpression, result:calcResult, note }]); if (error) return alert(error.message); await fetchData({ soft:true }); }
+      async saveCalc() {
+        if (!calcExpression || calcResult === '0' || calcResult === 'Eroare') return alert('Fă întâi un calcul valid.');
+        const note = document.getElementById('calcNoteInput')?.value.trim() || '';
+        const btn = document.getElementById('saveCalcBtn');
+        if (btn) { btn.disabled = true; btn.textContent = 'Se salvează...'; }
+        const payload = { user_email:currentUser.email, expression:calcExpression, result:calcResult, note };
+        const { data, error } = await supabase.from('calculator_history').insert([payload]).select().single();
+        if (error) {
+          if (btn) { btn.disabled = false; btn.textContent = 'Salvează Calcul'; }
+          return alert(error.message);
+        }
+        const saved = data || { ...payload, id:'local-calc-' + Date.now(), created_at:new Date().toISOString() };
+        calculatorHistory = [saved, ...calculatorHistory.filter(c => c.id !== saved.id)].slice(0, 30);
+        suppressSoftUntil = Date.now() + 1400;
+        const scroller = app.querySelector('.screen');
+        const y = scroller ? scroller.scrollTop : 0;
+        renderApp(true);
+        requestAnimationFrame(() => {
+          const next = app.querySelector('.screen');
+          if (next) next.scrollTop = y;
+        });
+        setTimeout(() => fetchData({ render:false }), 800);
+      }
     };
 
     async function start() {
