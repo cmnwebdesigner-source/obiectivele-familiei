@@ -7,79 +7,21 @@
   <meta name="theme-color" content="#f4f7fb" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-title" content="Obiectivele Familiei" />
-  <link rel="icon" type="image/png" href="" />
+  <link rel="icon" type="image/webp" href="" />
   <link rel="apple-touch-icon" href="" />
   <link id="dynamicManifest" rel="manifest" href="" />
   <script>
     (() => {
-      const createHomeScreenIcon = (size = 512) => {
-        const canvas = document.createElement('canvas');
-        canvas.width = size;
-        canvas.height = size;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return '';
-
-        const roundRect = (x, y, w, h, r) => {
-          const rr = Math.min(r, w / 2, h / 2);
-          ctx.beginPath();
-          ctx.moveTo(x + rr, y);
-          ctx.arcTo(x + w, y, x + w, y + h, rr);
-          ctx.arcTo(x + w, y + h, x, y + h, rr);
-          ctx.arcTo(x, y + h, x, y, rr);
-          ctx.arcTo(x, y, x + w, y, rr);
-          ctx.closePath();
-        };
-
-        ctx.clearRect(0, 0, size, size);
-
-        const bgGrad = ctx.createLinearGradient(0, 0, size, size);
-        bgGrad.addColorStop(0, '#ffffff');
-        bgGrad.addColorStop(0.6, '#f4f7fb');
-        bgGrad.addColorStop(1, '#eaf1fb');
-        roundRect(size * 0.08, size * 0.08, size * 0.84, size * 0.84, size * 0.19);
-        ctx.fillStyle = bgGrad;
-        ctx.fill();
-
-        ctx.lineWidth = Math.max(4, size * 0.012);
-        ctx.strokeStyle = 'rgba(37,99,235,.14)';
-        ctx.stroke();
-
-        const halo = ctx.createRadialGradient(size * 0.5, size * 0.5, size * 0.05, size * 0.5, size * 0.5, size * 0.34);
-        halo.addColorStop(0, 'rgba(37,99,235,.22)');
-        halo.addColorStop(1, 'rgba(37,99,235,0)');
-        ctx.beginPath();
-        ctx.arc(size * 0.5, size * 0.5, size * 0.24, 0, Math.PI * 2);
-        ctx.fillStyle = halo;
-        ctx.fill();
-
-        ctx.beginPath();
-        ctx.arc(size * 0.5, size * 0.5, size * 0.11, 0, Math.PI * 2);
-        ctx.fillStyle = '#2563eb';
-        ctx.fill();
-
-        ctx.beginPath();
-        ctx.arc(size * 0.5, size * 0.5, size * 0.055, 0, Math.PI * 2);
-        ctx.fillStyle = '#60a5fa';
-        ctx.fill();
-
-        ctx.beginPath();
-        ctx.arc(size * 0.46, size * 0.44, size * 0.018, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(255,255,255,.92)';
-        ctx.fill();
-
-        return canvas.toDataURL('image/png');
-      };
-
-      const icon = createHomeScreenIcon(512);
+      const icon = 'https://i.postimg.cc/vTJqVMdD/banc-de-purceli-ilustrarea-unui-desen-animat-unic-al-unei-bnci-cei-cu-monede-dolari-17106942.webp';
       window.HOME_SCREEN_ICON_URL = icon;
       const manifest = {
         name: 'Obiectivele Familiei Coman',
         short_name: 'Familie Coman',
         start_url: '.',
         display: 'standalone',
-        background_color: '#f4f7fb',
+        background_color: 'transparent',
         theme_color: '#f4f7fb',
-        icons: [{ src: icon, sizes: '512x512', type: 'image/png', purpose: 'any maskable' }]
+        icons: [{ src: icon, sizes: '512x512', type: 'image/webp', purpose: 'any' }]
       };
       const blob = new Blob([JSON.stringify(manifest)], { type: 'application/manifest+json' });
       window.addEventListener('DOMContentLoaded', () => {
@@ -896,15 +838,28 @@
       flex-shrink:0;
     }
     .piggy-icon-box svg { width:50px; height:50px; }
-    .piggy-top-image {
-      width: 54px;
-      height: 54px;
+    .piggy-top-image,
+    .piggy-badge-image,
+    .piggy-big-image {
       object-fit: contain;
       display: block;
       background: transparent;
-      filter: drop-shadow(0 8px 14px rgba(15,23,42,.08));
+      filter: none;
+      box-shadow: none;
       user-select: none;
       -webkit-user-drag: none;
+    }
+    .piggy-top-image {
+      width: 54px;
+      height: 54px;
+    }
+    .piggy-badge-image {
+      width: 56px;
+      height: 56px;
+    }
+    .piggy-big-image {
+      width: 78px;
+      height: 78px;
     }
     .piggy-head-label { font-size:11px; color:var(--muted); line-height:1; }
     .piggy-head-value { margin-top:4px; font-size:18px; font-weight:450; letter-spacing:-.035em; color:var(--text); white-space:nowrap; }
@@ -925,16 +880,16 @@
     .piggy-badge {
       width:56px;
       height:56px;
-      border-radius:22px;
+      border-radius:0;
       display:flex;
       align-items:center;
       justify-content:center;
-      background:linear-gradient(135deg, #0f172a, #2563eb);
-      color:#fff;
-      box-shadow:0 12px 22px rgba(37,99,235,.20);
+      background:transparent;
+      color:inherit;
+      box-shadow:none;
       flex-shrink:0;
+      overflow:visible;
     }
-    .piggy-badge svg { width:32px; height:32px; }
     .piggy-title { font-size:14px; font-weight:450; letter-spacing:-.02em; color:var(--text); }
     .piggy-msg { font-size:11px; color:var(--muted); line-height:1.35; margin-top:3px; max-width:235px; }
     .piggy-amount { text-align:right; flex-shrink:0; }
@@ -995,8 +950,8 @@
       border:0;
       box-shadow:none;
       flex-shrink:0;
+      overflow:visible;
     }
-    .piggy-big-icon svg { width:74px; height:74px; }
     .piggy-total-large { font-size:36px; line-height:1; letter-spacing:-.055em; font-weight:460; color:var(--text); }
     .piggy-target-note { font-size:12px; color:var(--muted); margin-top:6px; line-height:1.35; }
     .piggy-progress-big { height:12px; border-radius:999px; background:rgba(15,23,42,.07); overflow:hidden; margin:16px 0 12px; }
@@ -1015,17 +970,18 @@
     .piggy-flying-coin {
       position: fixed;
       z-index: 10000;
-      width: 34px;
-      height: 34px;
+      width: 28px;
+      height: 28px;
       border-radius: 999px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 12px;
-      font-weight: 800;
+      font-size: 9px;
+      font-weight: 700;
       color: #7c2d12;
-      background: radial-gradient(circle at 32% 28%, #fff7b8 0 12%, #fde047 30%, #f59e0b 70%, #b45309 100%);
-      box-shadow: 0 10px 22px rgba(245,158,11,.35), inset 0 1px 0 rgba(255,255,255,.55);
+      border: 1px solid rgba(146,64,14,.18);
+      background: radial-gradient(circle at 34% 28%, #fff8c9 0 10%, #fef08a 22%, #facc15 54%, #f59e0b 78%, #b45309 100%);
+      box-shadow: 0 5px 12px rgba(245,158,11,.22), inset 0 1px 0 rgba(255,255,255,.72), inset 0 -1px 0 rgba(146,64,14,.12);
       pointer-events: none;
       transform: translate(-50%, -50%) scale(.9);
       animation: piggyCoinFly .72s cubic-bezier(.16, .9, .22, 1) forwards;
@@ -1669,7 +1625,7 @@
         <div class="piggy-card" onclick="window.appActions.openPiggy()">
           <div class="piggy-main">
             <div class="piggy-title-row">
-              <div class="piggy-badge">${svg.pig}</div>
+              <div class="piggy-badge"><img src="${piggyTopIconUrl}" alt="Pușculiță" class="piggy-badge-image" draggable="false"></div>
               <div class="min-w-0">
                 <p class="piggy-title">Pușculița voastră</p>
                 <p class="piggy-msg">Apasă pentru detalii, istoric și monede.</p>
@@ -1738,7 +1694,7 @@ function piggyPageHTML() {
         ${backButton()}
         <div class="piggy-page-card mb-4">
           <div class="flex items-center gap-4 mb-4">
-            <div class="piggy-big-icon">${svg.pig}</div>
+            <div class="piggy-big-icon"><img src="${piggyTopIconUrl}" alt="Pușculiță" class="piggy-big-image" draggable="false"></div>
             <div class="min-w-0">
               <p class="label">Pușculiță comună</p>
               <h2 class="piggy-total-large">${money(balance)} RON</h2>
@@ -3014,7 +2970,7 @@ function piggyPageHTML() {
         const balance = gameWalletBalance();
         if (balance <= 0) return alert('Soldul jocurilor este 0.');
         const activeGoals = goals
-          .filter(g => goalBelongsToFamily(g) && !isGoalDone(g))
+          .filter(g => goalBelongsToFamily(g) && !isCommonGoal(g) && !isGoalDone(g))
           .sort((a, b) => String(a.title || '').localeCompare(String(b.title || ''), 'ro'));
         if (!activeGoals.length) return alert('Nu există niciun obiectiv activ în care să retragi banii.');
         modal.innerHTML = `<div class="modal-backdrop"><div class="sheet"><div class="grab"></div>
