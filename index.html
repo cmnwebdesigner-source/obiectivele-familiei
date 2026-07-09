@@ -1338,6 +1338,10 @@
     const getProfile = (email) => profiles.find(p => p.email === email);
     const getRole = (email) => email === currentUser?.email ? (getProfile(email)?.role || currentUser?.user_metadata?.role || 'sot') : (getProfile(email)?.role || 'sotie');
     const roleLabel = (role) => role === 'sotie' ? 'Soție' : 'Soț';
+    const profileRoleLabel = (role) => role === 'sotie' ? 'Sotia' : roleLabel(role);
+    const NOTIFICATION_READY_KEY = 'familie_push_notifications_ready';
+    const notificationsAreReady = () => localStorage.getItem(NOTIFICATION_READY_KEY) === '1' || (typeof Notification !== 'undefined' && Notification.permission === 'granted');
+    const notificationButtonText = () => notificationsAreReady() ? 'Notificari Activate' : 'Activeaza notificarile';
     const ownerLabel = (email) => email === currentUser?.email ? 'Tu' : roleLabel(getRole(email));
     const partnerEmail = () => profiles.find(p => p.email && p.email !== currentUser?.email && (!familyCode || p.family_code === familyCode))?.email || goals.find(g => g.owner && g.owner !== currentUser?.email && (!familyCode || g.family_code === familyCode))?.owner || null;
     const isGoalDone = (goal) => Number(goal?.current || 0) >= Number(goal?.target || 1);
@@ -1927,7 +1931,7 @@ function piggyPageHTML() {
         ${backButton()}
         <div class="top-card text-center mb-6">
           <div class="mx-auto mb-3" style="width:max-content">${avatarHTML(pEmail, true)}</div>
-          <h2 class="text-2xl font-medium">${roleLabel(pRole)}</h2>
+          <h2 class="text-2xl font-medium">${profileRoleLabel(pRole)}</h2>
           <p class="text-xs muted mt-1">${pEmail || 'Profil partener'}</p>
         </div>
         <div class="mt-5">
@@ -2015,12 +2019,19 @@ function piggyPageHTML() {
               <input type="file" accept="image/*" style="display:none" onchange="window.appActions.uploadAvatar(event)">
             </label>
           </div>
-          <h2 class="text-2xl font-medium">${roleLabel(role)}</h2>
+          <h2 class="text-2xl font-medium">${profileRoleLabel(role)}</h2>
           <p class="text-xs muted">${currentUser.email}</p>
         </div>
         <div class="card flex items-center justify-between mb-3">
           <div class="flex items-center gap-3"><span class="icon-btn">${svg.moon}</span><span class="text-sm">Mod întunecat</span></div>
           <button class="theme-switch" onclick="window.appActions.toggleTheme()" aria-label="Schimbă tema"><span></span></button>
+        </div>
+        <div class="card flex items-center justify-between gap-3 mb-3">
+          <div class="min-w-0">
+            <p class="text-sm" style="color:var(--text)">Notificari</p>
+            <p class="text-[11px] muted leading-snug">Buton pregătit pentru notificările push.</p>
+          </div>
+          <button id="pushNotificationBtn" class="btn ${notificationsAreReady() ? 'btn-soft' : 'btn-gold'}" onclick="window.appActions.preparePushNotifications()" ${notificationsAreReady() ? 'disabled' : ''}>${notificationButtonText()}</button>
         </div>
         <div class="card about-card mb-3">
           <h3>Despre aplicație</h3>
@@ -2666,6 +2677,32 @@ function piggyPageHTML() {
           });
       },
       switchPage(page) { if (page !== 'partner') selectedPartnerProfileEmail = ''; previousPage = currentPage; currentPage = page; renderApp(); },
+      async preparePushNotifications() {
+        const btn = document.getElementById('pushNotificationBtn');
+        if (btn) { btn.textContent = 'Se activeaza...'; btn.disabled = true; }
+        try {
+          if (typeof Notification === 'undefined') {
+            if (btn) { btn.textContent = 'Activeaza notificarile'; btn.disabled = false; }
+            return alert('Telefonul sau browserul nu suportă notificări web aici.');
+          }
+
+          let permission = Notification.permission;
+          if (permission === 'default') permission = await Notification.requestPermission();
+
+          if (permission === 'granted') {
+            localStorage.setItem(NOTIFICATION_READY_KEY, '1');
+            if (btn) { btn.textContent = 'Notificari Activate'; btn.className = 'btn btn-soft'; btn.disabled = true; }
+            return;
+          }
+
+          localStorage.removeItem(NOTIFICATION_READY_KEY);
+          if (btn) { btn.textContent = 'Activeaza notificarile'; btn.disabled = false; }
+          alert('Notificările nu au fost activate. Trebuie acceptată permisiunea din browser.');
+        } catch (error) {
+          if (btn) { btn.textContent = 'Activeaza notificarile'; btn.disabled = false; }
+          alert('Nu am putut activa notificările acum: ' + (error.message || error));
+        }
+      },
       goBack() { currentPage = previousPage && previousPage !== currentPage ? previousPage : 'home'; renderApp(); },
       openCalculator() { previousPage = currentPage; currentPage = 'calculator'; renderApp(); },
       openCalendar() { previousPage = currentPage; currentPage = 'calendar'; renderApp(); },
