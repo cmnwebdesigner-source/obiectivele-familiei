@@ -1179,13 +1179,16 @@
       };
     }
     function createBingoBoard(size) {
-      const total = Number(size || 5) * Number(size || 5);
-      const nums = Array.from({ length: 100 }, (_, i) => i + 1);
+      const n = [5, 7, 10].includes(Number(size)) ? Number(size) : 5;
+      const total = n * n;
+      // 5×5 = 25 numere, 7×7 = 49 numere, 10×10 = 100 numere.
+      // Tabla conține toate numerele de la 1 la total, doar amestecate.
+      const nums = Array.from({ length: total }, (_, i) => i + 1);
       for (let i = nums.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [nums[i], nums[j]] = [nums[j], nums[i]];
       }
-      return nums.slice(0, total);
+      return nums;
     }
     function bingoMarksArray(marks) {
       if (Array.isArray(marks)) return marks.map(Number).filter(n => Number.isInteger(n));
@@ -1981,7 +1984,7 @@
         ${gameWalletHTML()}
         <div class="top-card mb-4">
           <div class="flex items-center gap-3"><span class="icon-btn">${svg.gamepad}</span><div><p class="muted text-xs">BINGO</p><h2 class="text-2xl font-medium tracking-[-.03em]">Meniu joc</h2></div></div>
-          <p class="text-sm muted mt-3">Alege categoria, pariul și trimite invitația. După accept, pornești runda cu START JOC.</p>
+          <p class="text-sm muted mt-3">Alege modul, generează tabla și trimite invitația. După accept, pornești runda cu START JOC.</p>
         </div>
         <div class="card mb-4">
           <p class="label">Categorie joc</p>
@@ -1997,7 +2000,7 @@
             <div class="flex items-center justify-between gap-3">
               <div>
                 <p class="label" style="margin:0">Numerele tale</p>
-                <p class="text-[11px] muted mt-1">${boardGenerated ? 'Tabla este pregătită.' : 'Generează sau regenerează înainte de start.'}</p>
+                <p class="text-[11px] muted mt-1">${boardGenerated ? `${Number(room?.board_size || selectedBingoSize || 5)}×${Number(room?.board_size || selectedBingoSize || 5)} pregătit.` : `${Number(selectedBingoSize || 5)}×${Number(selectedBingoSize || 5)} are ${Number(selectedBingoSize || 5) * Number(selectedBingoSize || 5)} căsuțe.`}</p>
               </div>
               <button class="btn btn-soft" onclick="window.appActions.generateBingoNumbers('${room?.id || ''}')">Generează numere</button>
             </div>
@@ -2036,9 +2039,10 @@
     }
 
     function bingoPreviewHTML(room = null) {
-      const size = Number(room?.board_size || selectedBingoSize || 5);
+      const size = [5, 7, 10].includes(Number(room?.board_size || selectedBingoSize)) ? Number(room?.board_size || selectedBingoSize) : 5;
       const st = room ? bingoState(room) : null;
-      const board = (room && st?.boards?.[currentUser?.email]) || selectedBingoPreviewBoard || [];
+      const rawBoard = (room && st?.boards?.[currentUser?.email]) || selectedBingoPreviewBoard || [];
+      const board = Array.isArray(rawBoard) && rawBoard.length === size * size ? rawBoard.map(Number) : [];
       if (!board.length) return `<div class="bingo-preview-grid" style="grid-template-columns:repeat(${Math.min(size, 5)}, minmax(0, 1fr));"><div class="text-xs muted" style="grid-column:1/-1;text-align:center;padding:14px 0;">Apasă „Generează numere”.</div></div>`;
       return `<div class="bingo-preview-grid" style="grid-template-columns:repeat(${size}, minmax(0, 1fr));">
         ${board.map(n => `<span class="bingo-preview-cell">${n}</span>`).join('')}
@@ -2586,7 +2590,11 @@
       },
       openFlappyRoom(id) { selectedGameRoomId = id; previousPage = currentPage; currentPage = 'flappyGame'; renderApp(); },
       setGameBet(v) { selectedBetAmount = Number(v || 5); renderApp(); },
-      setBingoSize(v) { selectedBingoSize = [5,7,10].includes(Number(v)) ? Number(v) : 5; selectedBingoPreviewBoard = []; renderApp(); },
+      setBingoSize(v) {
+        selectedBingoSize = [5,7,10].includes(Number(v)) ? Number(v) : 5;
+        selectedBingoPreviewBoard = [];
+        renderApp(true);
+      },
       resetFlappySelection() { selectedGameRoomId = ''; previousPage = 'games'; currentPage = 'flappyLobby'; renderApp(); },
       async replayFlappyRoom(id) {
         const room = gameRooms.find(r => r.id === id);
@@ -2995,7 +3003,7 @@
 
       async generateBingoNumbers(roomId = '') {
         const room = roomId ? gameRooms.find(r => r.id === roomId) : null;
-        const size = Number(room?.board_size || selectedBingoSize || 5);
+        const size = [5,7,10].includes(Number(room?.board_size || selectedBingoSize)) ? Number(room?.board_size || selectedBingoSize) : 5;
         const board = createBingoBoard(size);
         selectedBingoPreviewBoard = board;
         if (!room || !['invite','accepted'].includes(room.status)) {
@@ -3006,20 +3014,22 @@
         const localState = {
           size,
           boards: { ...(st.boards || {}), [currentUser.email]: board },
-          marks: st.marks || {},
-          lines: st.lines || {},
-          letters: st.letters || {}
+          marks: { ...(st.marks || {}), [currentUser.email]: [] },
+          lines: { ...(st.lines || {}), [currentUser.email]: [] },
+          letters: { ...(st.letters || {}), [currentUser.email]: 0 }
         };
+        room.board_size = size;
         room.game_state = localState;
+        room.scores = { ...(room.scores || {}), [currentUser.email]: 0 };
         renderApp(true);
         try {
-          const { data, error } = await supabase.rpc('set_bingo_player_board', {
+          const { error } = await supabase.rpc('set_bingo_player_board', {
             p_room_id: room.id,
             p_player_email: currentUser.email,
             p_board: board
           });
           if (error) throw error;
-          scheduleSoftRefresh(50);
+          scheduleSoftRefresh(30);
         } catch (error) {
           alert('Eroare la generarea numerelor: ' + (error.message || error));
           scheduleSoftRefresh(30);
@@ -3040,7 +3050,8 @@
             renderApp();
             return alert('Există deja o rundă activă. Folosește-o pe aceea sau așteaptă să se termine.');
           }
-          const creatorBoard = selectedBingoPreviewBoard.length === size * size ? selectedBingoPreviewBoard : [];
+          const creatorBoard = selectedBingoPreviewBoard.length === size * size ? selectedBingoPreviewBoard : createBingoBoard(size);
+          selectedBingoPreviewBoard = creatorBoard;
           const payload = {
             family_code: familyCode,
             game_type: GAME_TYPE_FLAPPY,
@@ -3090,9 +3101,11 @@
           const size = Number(room.board_size || selectedBingoSize || 5);
           const startAt = new Date(Date.now() + 3200).toISOString();
           const oldState = bingoState(room);
+          const creatorOld = oldState.boards?.[room.creator_email] || [];
+          const opponentOld = oldState.boards?.[room.opponent_email] || [];
           const boards = {
-            [room.creator_email]: (oldState.boards?.[room.creator_email] || []).length === size * size ? oldState.boards[room.creator_email] : createBingoBoard(size),
-            [room.opponent_email]: (oldState.boards?.[room.opponent_email] || []).length === size * size ? oldState.boards[room.opponent_email] : createBingoBoard(size)
+            [room.creator_email]: Array.isArray(creatorOld) && creatorOld.length === size * size ? creatorOld.map(Number) : createBingoBoard(size),
+            [room.opponent_email]: Array.isArray(opponentOld) && opponentOld.length === size * size ? opponentOld.map(Number) : createBingoBoard(size)
           };
           const state = { size, boards, marks:{ [room.creator_email]:[], [room.opponent_email]:[] }, lines:{ [room.creator_email]:[], [room.opponent_email]:[] }, letters:{ [room.creator_email]:0, [room.opponent_email]:0 } };
           const scores = { [room.creator_email]:0, [room.opponent_email]:0 };
