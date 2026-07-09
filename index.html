@@ -80,6 +80,7 @@
     .screen::-webkit-scrollbar { display:none; }
 
     .screen.no-nav { padding-bottom: 22px; }
+    .screen.soft-render { animation: none !important; }
 
     @keyframes fade {
       from { opacity: .75; transform: translateY(4px); }
@@ -633,10 +634,12 @@
     .family-code-card .label { font-size: 10px; margin-bottom: 3px; }
     .family-code-card .input { padding: 8px 10px; border-radius: 11px; font-size: 12px; min-height: 36px; }
     .family-code-card .btn { padding: 8px 10px; border-radius: 11px; white-space: nowrap; min-height: 36px; font-size: 12px; }
-    .family-code-lock { display:flex; align-items:center; justify-content:space-between; gap:10px; }
-    .family-code-value { display:inline-flex; align-items:center; justify-content:center; padding:7px 12px; min-width:78px; border-radius:12px; background:var(--soft); border:1px solid var(--line); font-size:13px; letter-spacing:.12em; color:var(--ink); }
-    .family-save-status { font-size: 11px; color: var(--success); font-weight: 600; white-space:nowrap; }
-    .family-code-note { font-size: 9.5px; color: var(--muted); line-height: 1.25; margin-top: 5px; }
+    .family-code-lock { display:grid; grid-template-columns: 1fr 1fr; gap:8px; align-items:end; }
+    .family-code-value { display:flex; align-items:center; justify-content:center; width:100%; min-height:36px; padding:7px 12px; border-radius:12px; background:rgba(100,116,139,.12); border:1px solid rgba(100,116,139,.18); font-size:13px; letter-spacing:.12em; color:#64748b; }
+    .family-save-status { display:flex; align-items:center; justify-content:center; width:100%; min-height:36px; border-radius:12px; background:rgba(22,163,74,.12); border:1px solid rgba(22,163,74,.20); font-size:12px; color:var(--success); font-weight:600; white-space:nowrap; }
+    body.dark-mode .family-code-value { background:rgba(148,163,184,.12); border-color:rgba(148,163,184,.18); color:#cbd5e1; }
+    body.dark-mode .family-save-status { background:rgba(22,163,74,.16); border-color:rgba(134,239,172,.20); color:#86efac; }
+    .family-code-note { display:none; }
     .profile-category-grid { display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom: 14px; }
     .profile-category-card {
       border: 1px solid var(--line);
@@ -693,6 +696,7 @@
     let selectedGoalId = null;
     let subscription = null;
     let refreshTimer = null;
+    let suppressSoftUntil = 0;
     let calcExpression = '';
     let calcResult = '0';
     let swipeStartX = 0;
@@ -857,7 +861,11 @@
 
     function scheduleSoftRefresh() {
       clearTimeout(refreshTimer);
-      refreshTimer = setTimeout(() => fetchData({ soft: true }), 280);
+      if (Date.now() < suppressSoftUntil) {
+        refreshTimer = setTimeout(() => fetchData({ render: false }), Math.max(450, suppressSoftUntil - Date.now()));
+        return;
+      }
+      refreshTimer = setTimeout(() => fetchData({ soft: true }), 650);
     }
 
     function renderApp(soft = false) {
@@ -875,8 +883,12 @@
       else if (currentPage === 'goalStats') { content = statsHTML(); nav = false; }
       else if (currentPage === 'goalList') { content = goalListPageHTML(); nav = false; }
       else content = homeHTML();
-      app.innerHTML = `<div class="screen ${nav ? '' : 'no-nav'}">${content}</div>${nav ? bottomNavHTML() : ''}`;
-      if (soft) requestAnimationFrame(() => { const s = app.querySelector('.screen'); if (s) s.scrollTop = scrollTop; });
+      app.innerHTML = `<div class="screen ${nav ? '' : 'no-nav'} ${soft ? 'soft-render' : ''}">${content}</div>${nav ? bottomNavHTML() : ''}`;
+      if (soft) {
+        const s = app.querySelector('.screen');
+        if (s) s.scrollTop = scrollTop;
+        requestAnimationFrame(() => { const again = app.querySelector('.screen'); if (again) again.scrollTop = scrollTop; });
+      }
     }
 
     function avatarHTML(email = currentUser?.email, large = false) {
@@ -1168,7 +1180,6 @@
             </div>
             <div id="familyCodeSavedStatus" class="family-save-status">Salvat</div>
           </div>
-          <p class="family-code-note">Codul este salvat și blocat pentru familia voastră.</p>
         </div>
         ${profileGoalSections(currentUser.email, true)}
         ${commonGoalSections()}`;
@@ -1320,6 +1331,7 @@
           localGoal = { id: crypto.randomUUID(), title, target, current: 0, owner: currentUser.email, family_code: familyCode, goal_type: goalType, created_at: new Date().toISOString() };
           goals.unshift(localGoal);
           this.closeModal();
+          suppressSoftUntil = Date.now() + 1300;
           renderApp();
 
           const rpc = await supabase.rpc('create_goal_safe', { p_title: title, p_target: target, p_goal_type: goalType });
@@ -1330,6 +1342,7 @@
           } else if (rpc.data) {
             goals = goals.map(g => g.id === localGoal.id ? rpc.data : g);
           }
+          suppressSoftUntil = Date.now() + 1300;
           renderApp(true);
           scheduleSoftRefresh();
         } catch (error) {
@@ -1355,6 +1368,7 @@
         if (btn) { btn.textContent = 'Salvez...'; btn.disabled = true; }
         g.target = newTarget;
         this.closeModal();
+        suppressSoftUntil = Date.now() + 1300;
         renderApp(true);
         try {
           const rpc = await supabase.rpc('update_goal_target_safe', { p_goal_id: id, p_new_target: newTarget });
@@ -1366,6 +1380,7 @@
             if (upd.error) throw upd.error;
           }
           if (!wasDone && isGoalDone(g)) markGoalCompleted(g);
+          suppressSoftUntil = Date.now() + 1300;
           scheduleSoftRefresh();
         } catch (error) {
           g.target = oldTarget;
@@ -1423,6 +1438,7 @@
         };
         transactions.unshift(localTransaction);
         this.closeModal();
+        suppressSoftUntil = Date.now() + 1300;
         renderApp(true);
 
         try {
@@ -1446,6 +1462,7 @@
           const tr = await supabase.from('transactions').insert([{ goal_id:id, goal_title:String(g.title || '').toUpperCase(), amount:actualDelta, from_role:currentUser.email, to_role:g.owner, date:todayISO(), timestamp:new Date().toISOString(), family_code: familyCode }]).select('*').maybeSingle();
           if (tr.error) throw tr.error;
           if (tr.data) transactions = transactions.map(t => t.id === localTransaction.id ? tr.data : t);
+          suppressSoftUntil = Date.now() + 1300;
           renderApp(true);
           if (old < target && finalAmount >= target) markGoalCompleted(g);
           scheduleSoftRefresh();
