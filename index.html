@@ -80,33 +80,9 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
 
-        // Afisare eroare clara daca ceva nu se incarca, in loc de ecran alb
-        const showStartupError = (message) => {
-            const el = document.getElementById('app');
-            if (!el) return;
-            el.innerHTML = `
-                <div class="min-h-screen flex items-center justify-center p-6 bg-slate-50 dark:bg-slate-900">
-                    <div class="bg-white dark:bg-slate-800 rounded-3xl p-6 shadow-sm border border-red-100 dark:border-red-900/40 text-center max-w-sm">
-                        <div class="w-14 h-14 rounded-full bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-300 flex items-center justify-center mx-auto mb-4">
-                            <i class="fas fa-triangle-exclamation text-2xl"></i>
-                        </div>
-                        <h1 class="text-xl font-black text-slate-800 dark:text-white mb-2">Aplicația nu a pornit</h1>
-                        <p class="text-sm text-slate-500 dark:text-slate-300 leading-relaxed">${message}</p>
-                        <p class="text-xs text-slate-400 mt-4">Verifică să fie fișierul numit <b>index.html</b> și să fie internet pentru Supabase/Tailwind.</p>
-                    </div>
-                </div>
-            `;
-        };
-        window.addEventListener('error', (e) => showStartupError('Eroare JavaScript: ' + (e.message || 'necunoscută')));
-        window.addEventListener('unhandledrejection', (e) => showStartupError('Eroare aplicație: ' + ((e.reason && e.reason.message) || e.reason || 'necunoscută')));
-
         // 1. Supabase Init
-        if (!window.supabase || !window.supabase.createClient) {
-            showStartupError('Supabase nu s-a încărcat. Deschide pagina cu internet activ sau verifică linkul CDN.');
-            throw new Error('Supabase CDN missing');
-        }
-        const supabaseUrl = 'https://hfqsouqtqvyxegcrabnc.supabase.co';
-        const supabaseKey = 'sb_publishable_eqlbyUXpwcp-i-dPhFPsmA_wHqDW1AD';
+        const supabaseUrl = 'https://pvbxctpfkcwsuqdntppe.supabase.co';
+        const supabaseKey = 'sb_publishable_jgZtvZVXSCplbeju-njPIQ_IkjerrGi';
         const supabase = window.supabase.createClient(supabaseUrl, supabaseKey, {
             auth: {
                 persistSession: true,
@@ -121,16 +97,6 @@
         let transactions = [];
         let profiles = [];
         let calculatorHistory = [];
-        let gameRooms = [];
-        let gameWallets = [];
-        let activeGameRoomId = null;
-        let gameLoopTimer = null;
-        let gameCountdownTimer = null;
-        let gameSpawnTimer = null;
-        let gameScoreSyncTimer = null;
-        let localGameScore = 0;
-        let localGameMultiplier = 1;
-        let localGameSpeedMode = false;
         let currentTab = 'home';
         let selectedDate = new Date().toISOString().split('T')[0];
         let calendarSwipeStartX = 0;
@@ -253,28 +219,6 @@
                     calculatorHistory = calcData;
                 }
 
-                const { data: walletData, error: walletError } = await supabase
-                    .from('game_wallets')
-                    .select('*')
-                    .order('updated_at', { ascending: false });
-                if (walletError) console.warn('Game wallets indisponibil:', walletError.message);
-                else if (walletData) gameWallets = walletData;
-
-                const { data: roomsData, error: roomsError } = await supabase
-                    .from('game_rooms')
-                    .select('*')
-                    .order('created_at', { ascending: false })
-                    .limit(25);
-                if (roomsError) console.warn('Game rooms indisponibil:', roomsError.message);
-                else if (roomsData) gameRooms = roomsData;
-
-                const activeRoom = activeGameRoomId ? getGameRoomById(activeGameRoomId) : null;
-                const gameAreaExists = Boolean(document.getElementById('gameArea'));
-                if (silent && currentTab === 'gamePlay' && activeRoom?.status === 'playing' && gameAreaExists) {
-                    updateGameHudFromRoom(activeRoom);
-                    return;
-                }
-
                 renderMain(silent);
             } catch (error) {
                 console.error(error);
@@ -293,9 +237,6 @@
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, () => scheduleFetchData())
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => scheduleFetchData())
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'calculator_history' }, () => scheduleFetchData())
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'game_rooms' }, () => scheduleFetchData(120))
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'game_wallets' }, () => scheduleFetchData(120))
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'game_transactions' }, () => scheduleFetchData(160))
                 .subscribe();
         };
 
@@ -359,11 +300,9 @@
             else if (currentTab === 'profile') content = getProfileHTML();
             else if (currentTab === 'partner') content = getPartnerProfileHTML();
             else if (currentTab === 'calculator') content = getCalculatorPageHTML();
-            else if (currentTab === 'games') content = getGamesHTML();
-            else if (currentTab === 'gamePlay') content = getGamePlayHTML();
             else if (currentTab === 'goalStats') content = getGoalStatsPageHTML();
 
-            const isFullPage = currentTab === 'calculator' || currentTab === 'goalStats' || currentTab === 'gamePlay';
+            const isFullPage = currentTab === 'calculator' || currentTab === 'goalStats';
             appContainer.innerHTML = `
                 <div class="app-scroll flex-1 overflow-y-auto hide-scroll ${isFullPage ? 'pb-6' : 'pb-24'} p-4 md:p-6 ${soft ? 'soft-render' : 'fade-in'} h-full">
                     ${content}
@@ -377,8 +316,6 @@
                     if (nextScrollWrap) nextScrollWrap.scrollTop = savedScrollTop;
                 });
             }
-            if (currentTab === 'gamePlay') setTimeout(() => startGamePageRuntime(), 60);
-            else stopGameRuntime();
         };
 
         const getHomeHTML = () => {
@@ -795,236 +732,8 @@
             `;
         };
 
-        const getMyGameWallet = () => {
-            if (!currentUser) return null;
-            return gameWallets.find(w => w.user_email === currentUser.email) || { user_email: currentUser.email, balance: 0 };
-        };
-
-        const getGameBalance = () => Number(getMyGameWallet()?.balance || 0);
-
-        const getGameRoomById = (roomId) => gameRooms.find(r => String(r.id) === String(roomId));
-
-        const getOpenGameRooms = () => gameRooms.filter(r => {
-            if (!currentUser) return false;
-            return r.status === 'pending' && !r.opponent_email && r.creator_email !== currentUser.email;
-        });
-
-        const getMyGameRooms = () => gameRooms.filter(r => {
-            if (!currentUser) return false;
-            return r.creator_email === currentUser.email || r.opponent_email === currentUser.email;
-        });
-
-        const getRoomOpponentEmail = (room) => {
-            if (!room || !currentUser) return '';
-            return room.creator_email === currentUser.email ? (room.opponent_email || '') : room.creator_email;
-        };
-
-        const getScoreFromRoom = (room, email) => {
-            const scores = room?.scores || {};
-            return Number(scores[email] || 0);
-        };
-
-        const updateGameHudFromRoom = (room) => {
-            if (!room || !currentUser) return;
-            const otherEmail = getRoomOpponentEmail(room);
-            const otherScoreEl = document.getElementById('otherGameScore');
-            if (otherScoreEl) otherScoreEl.textContent = getScoreFromRoom(room, otherEmail);
-        };
-
-        const getGamesHTML = () => {
-            const balance = getGameBalance();
-            const openRooms = getOpenGameRooms();
-            const myRooms = getMyGameRooms();
-            const activeRooms = myRooms.filter(r => ['pending', 'countdown', 'playing'].includes(r.status));
-            const finishedRooms = myRooms.filter(r => r.status === 'finished').slice(0, 5);
-            const myGoals = goals.filter(g => g.owner === currentUser.email && !isGoalCompleted(g));
-
-            return `
-                <div class="fade-in max-w-sm mx-auto mt-2">
-                    <header class="flex items-center justify-between mb-6">
-                        <div>
-                            <h2 class="font-black text-2xl text-slate-800 dark:text-white">Jocuri</h2>
-                            <p class="text-sm text-slate-500 dark:text-slate-400">Provocări între voi doi</p>
-                        </div>
-                        <div class="w-12 h-12 rounded-full bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-300 flex items-center justify-center">
-                            <i class="fas fa-gamepad text-xl"></i>
-                        </div>
-                    </header>
-
-                    <section class="bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-3xl p-5 shadow-sm mb-5">
-                        <p class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">Sold Jocuri</p>
-                        <div class="flex items-end justify-between gap-3">
-                            <p class="text-4xl font-black text-slate-800 dark:text-white">${balance}<span class="text-base text-slate-400 ml-1">RON</span></p>
-                            <button onclick="window.appActions.openWithdrawGameWalletModal()" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-xl font-bold text-sm shadow-sm ${balance <= 0 || myGoals.length === 0 ? 'opacity-50' : ''}">Retrage</button>
-                        </div>
-                        <p class="text-xs text-slate-400 mt-2">Câștigurile din joc pot fi mutate într-un obiectiv de-al tău.</p>
-                    </section>
-
-                    <section class="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-500/30 rounded-3xl p-5 mb-5">
-                        <h3 class="font-black text-lg text-slate-800 dark:text-white mb-1">Prinde banii</h3>
-                        <p class="text-sm text-slate-500 dark:text-slate-400 mb-4">Pariați o sumă, acceptați amândoi, apoi începe jocul la amândoi cu 3, 2, 1.</p>
-                        <div class="grid grid-cols-3 gap-2 mb-3">
-                            <button onclick="window.appActions.setBetAmount(5)" class="py-3 rounded-2xl bg-white dark:bg-slate-800 border border-indigo-100 dark:border-indigo-500/30 font-black text-indigo-600 dark:text-indigo-300">5 lei</button>
-                            <button onclick="window.appActions.setBetAmount(10)" class="py-3 rounded-2xl bg-white dark:bg-slate-800 border border-indigo-100 dark:border-indigo-500/30 font-black text-indigo-600 dark:text-indigo-300">10 lei</button>
-                            <input id="betAmountInput" type="number" min="1" placeholder="Altă" class="py-3 rounded-2xl bg-white dark:bg-slate-800 border border-indigo-100 dark:border-indigo-500/30 font-black text-center text-slate-800 dark:text-white outline-none">
-                        </div>
-                        <button onclick="window.appActions.createGameRoom()" id="createGameBtn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black py-3 rounded-2xl shadow-sm">Creează pariu</button>
-                    </section>
-
-                    ${openRooms.length ? `
-                        <section class="mb-5">
-                            <div class="flex items-center justify-between mb-2 px-1">
-                                <h3 class="font-black text-slate-800 dark:text-white">Invitații primite</h3>
-                                <span class="text-xs font-bold bg-red-100 text-red-600 px-2 py-1 rounded-lg">${openRooms.length}</span>
-                            </div>
-                            <div class="space-y-3">
-                                ${openRooms.map(room => `
-                                    <div class="bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl p-4 flex items-center justify-between gap-3">
-                                        <div>
-                                            <p class="font-bold text-sm text-slate-800 dark:text-white">${safeText(getShortRoleName(room.creator_email))} te provoacă</p>
-                                            <p class="text-xs text-slate-500 dark:text-slate-400">Pariu: <b>${Number(room.bet_amount || 0)} RON</b></p>
-                                        </div>
-                                        <button onclick='window.appActions.acceptGameRoom(${JSON.stringify(room.id)})' class="bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded-xl font-bold text-xs">Sunt de acord</button>
-                                    </div>
-                                `).join('')}
-                            </div>
-                        </section>
-                    ` : ''}
-
-                    <section class="mb-5">
-                        <div class="flex items-center justify-between mb-2 px-1">
-                            <h3 class="font-black text-slate-800 dark:text-white">Jocurile tale</h3>
-                            <span class="text-xs text-slate-400">${myRooms.length}</span>
-                        </div>
-                        <div class="space-y-3">
-                            ${myRooms.length === 0 ? `<div class="bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl p-5 text-center text-sm text-slate-400">Nu ai jocuri încă.</div>` : activeRooms.map(room => `
-                                <div class="bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl p-4">
-                                    <div class="flex items-center justify-between gap-3">
-                                        <div>
-                                            <p class="font-bold text-sm text-slate-800 dark:text-white">Prinde banii • ${Number(room.bet_amount || 0)} RON</p>
-                                            <p class="text-xs text-slate-500 dark:text-slate-400">${getGameStatusLabel(room)}</p>
-                                        </div>
-                                        <button onclick='window.appActions.openGameRoom(${JSON.stringify(room.id)})' class="bg-indigo-600 text-white px-3 py-2 rounded-xl font-bold text-xs">Deschide</button>
-                                    </div>
-                                </div>
-                            `).join('')}
-                            ${finishedRooms.map(room => `
-                                <div class="bg-slate-50 dark:bg-slate-800/70 border border-slate-100 dark:border-slate-700 rounded-2xl p-4">
-                                    <div class="flex items-center justify-between gap-3">
-                                        <div>
-                                            <p class="font-bold text-sm text-slate-800 dark:text-white">Prinde banii • ${Number(room.bet_amount || 0)} RON</p>
-                                            <p class="text-xs ${room.winner_email === currentUser.email ? 'text-green-600 dark:text-green-400' : 'text-red-500'}">${room.winner_email === currentUser.email ? 'Ai câștigat' : 'Ai pierdut'}</p>
-                                        </div>
-                                        <button onclick='window.appActions.openGameRoom(${JSON.stringify(room.id)})' class="bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 px-3 py-2 rounded-xl font-bold text-xs">Vezi</button>
-                                    </div>
-                                </div>
-                            `).join('')}
-                        </div>
-                    </section>
-                </div>
-            `;
-        };
-
-        const getGameStatusLabel = (room) => {
-            if (!room) return '';
-            if (room.status === 'pending') return room.creator_email === currentUser.email ? 'Așteaptă acordul partenerului' : 'Așteaptă să accepți';
-            if (room.status === 'countdown') return 'Pregătiți jocul';
-            if (room.status === 'playing') return 'Joc pornit';
-            if (room.status === 'finished') return room.winner_email === currentUser.email ? 'Ai câștigat' : 'Joc terminat';
-            return room.status;
-        };
-
-        const getGamePlayHTML = () => {
-            const room = getGameRoomById(activeGameRoomId);
-            if (!room) {
-                return `
-                    <div class="fade-in max-w-sm mx-auto mt-2">
-                        <button onclick="window.appActions.switchTab('games')" class="mb-5 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white transition-colors flex items-center gap-2 font-medium bg-slate-100 dark:bg-slate-800 px-4 py-2 rounded-full w-max">
-                            <i class="fas fa-arrow-left"></i> Jocuri
-                        </button>
-                        <div class="bg-white dark:bg-slate-800 rounded-3xl p-6 border border-slate-100 dark:border-slate-700 text-center">
-                            <p class="text-slate-500 dark:text-slate-400">Jocul nu mai există sau nu s-a încărcat încă.</p>
-                        </div>
-                    </div>
-                `;
-            }
-            const myScore = getScoreFromRoom(room, currentUser.email);
-            const otherEmail = getRoomOpponentEmail(room);
-            const otherScore = getScoreFromRoom(room, otherEmail);
-            const startTime = room.start_at ? new Date(room.start_at).getTime() : 0;
-            const remainingMs = Math.max(0, startTime - Date.now());
-            const countdownText = room.status === 'countdown' ? Math.ceil(remainingMs / 1000) : '';
-            const isFinished = room.status === 'finished';
-            const isWinner = room.winner_email === currentUser.email;
-
-            return `
-                <div class="fade-in max-w-sm mx-auto mt-2">
-                    <button onclick="window.appActions.backFromGame()" class="mb-4 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white transition-colors flex items-center gap-2 font-medium bg-slate-100 dark:bg-slate-800 px-4 py-2 rounded-full w-max">
-                        <i class="fas fa-arrow-left"></i> Jocuri
-                    </button>
-
-                    <section class="bg-white dark:bg-slate-800 rounded-3xl p-4 border border-slate-100 dark:border-slate-700 shadow-sm mb-4">
-                        <div class="flex items-center justify-between mb-3">
-                            <div>
-                                <p class="text-xs uppercase tracking-wider font-bold text-slate-400">Pariu</p>
-                                <p class="font-black text-xl text-slate-800 dark:text-white">${Number(room.bet_amount || 0)} RON</p>
-                            </div>
-                            <span class="px-3 py-1 rounded-full text-xs font-bold ${isFinished ? (isWinner ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600') : 'bg-indigo-100 text-indigo-600'}">${isFinished ? (isWinner ? 'Câștigat' : 'Pierdut') : getGameStatusLabel(room)}</span>
-                        </div>
-                        <div class="grid grid-cols-2 gap-3">
-                            <div class="rounded-2xl bg-indigo-50 dark:bg-indigo-900/20 p-3 text-center">
-                                <p class="text-[11px] font-bold text-indigo-500 uppercase mb-1">Tu</p>
-                                <p id="myGameScore" class="text-3xl font-black text-indigo-600 dark:text-indigo-300">${myScore}</p>
-                            </div>
-                            <div class="rounded-2xl bg-red-50 dark:bg-red-900/20 p-3 text-center">
-                                <p class="text-[11px] font-bold text-red-500 uppercase mb-1">Partener</p>
-                                <p id="otherGameScore" class="text-3xl font-black text-red-600 dark:text-red-300">${otherScore}</p>
-                            </div>
-                        </div>
-                    </section>
-
-                    ${room.status === 'pending' ? `
-                        <div class="bg-white dark:bg-slate-800 rounded-3xl p-6 border border-slate-100 dark:border-slate-700 text-center">
-                            <div class="w-16 h-16 rounded-full bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-300 flex items-center justify-center mx-auto mb-4"><i class="fas fa-hourglass-half text-2xl"></i></div>
-                            <h3 class="font-black text-xl text-slate-800 dark:text-white mb-2">Așteptăm acordul</h3>
-                            <p class="text-sm text-slate-500 dark:text-slate-400">Jocul începe automat după ce partenerul apasă „Sunt de acord”.</p>
-                        </div>
-                    ` : ''}
-
-                    ${room.status === 'countdown' ? `
-                        <div class="bg-indigo-600 text-white rounded-3xl p-8 text-center shadow-lg">
-                            <p class="text-sm font-bold uppercase opacity-80 mb-2">Pornește jocul în</p>
-                            <p id="gameCountdown" class="text-7xl font-black">${countdownText || '3'}</p>
-                            <p class="text-lg font-black mt-2">Pregătește-te!</p>
-                        </div>
-                    ` : ''}
-
-                    ${room.status === 'playing' ? `
-                        <div id="gameArea" class="relative h-[420px] bg-gradient-to-b from-indigo-50 to-white dark:from-slate-800 dark:to-slate-900 border border-indigo-100 dark:border-slate-700 rounded-3xl overflow-hidden shadow-inner touch-none no-select">
-                            <div class="absolute top-3 left-3 right-3 flex justify-between z-10 pointer-events-none">
-                                <span id="gameBuffLabel" class="text-xs font-black bg-white/80 dark:bg-slate-900/80 px-3 py-1.5 rounded-full text-slate-600 dark:text-slate-200">Scor 100 câștigă</span>
-                                <span class="text-xs font-black bg-white/80 dark:bg-slate-900/80 px-3 py-1.5 rounded-full text-slate-600 dark:text-slate-200">Prinde banii</span>
-                            </div>
-                        </div>
-                        <p class="text-center text-xs text-slate-400 mt-3">Bani = puncte. Bombă/capcană scade. Fulger/X2 țin 3 secunde.</p>
-                    ` : ''}
-
-                    ${isFinished ? `
-                        <div class="bg-white dark:bg-slate-800 rounded-3xl p-6 border border-slate-100 dark:border-slate-700 text-center">
-                            <div class="w-20 h-20 rounded-full ${isWinner ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'} flex items-center justify-center mx-auto mb-4"><i class="fas ${isWinner ? 'fa-trophy' : 'fa-face-frown'} text-3xl"></i></div>
-                            <h3 class="font-black text-2xl text-slate-800 dark:text-white mb-2">${isWinner ? 'Ai câștigat!' : 'A câștigat partenerul'}</h3>
-                            <p class="text-sm text-slate-500 dark:text-slate-400 mb-4">Scor final: Tu ${myScore} • Partener ${otherScore}</p>
-                            <button onclick="window.appActions.switchTab('games')" class="w-full bg-indigo-600 text-white font-black py-3 rounded-2xl">Joacă din nou</button>
-                        </div>
-                    ` : ''}
-                </div>
-            `;
-        };
-
-
         const getBottomNavHTML = () => {
             const isHome = currentTab === 'home';
-            const isGames = currentTab === 'games';
             const isProfile = currentTab === 'profile';
             
             return `
@@ -1032,11 +741,6 @@
                     <button onclick="window.appActions.switchTab('home')" class="flex flex-col items-center justify-center w-20 h-full ${isHome ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'} transition-colors">
                         <i class="fas fa-home text-xl mb-1"></i>
                         <span class="text-[10px] font-semibold">Acasă</span>
-                    </button>
-
-                    <button onclick="window.appActions.switchTab('games')" class="flex flex-col items-center justify-center w-20 h-full ${isGames ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'} transition-colors">
-                        <i class="fas fa-gamepad text-xl mb-1"></i>
-                        <span class="text-[10px] font-semibold">Jocuri</span>
                     </button>
                     
                     <div class="relative -top-6">
@@ -1266,163 +970,6 @@
             reader.readAsDataURL(file);
         });
 
-        const stopGameRuntime = () => {
-            clearInterval(gameLoopTimer);
-            clearInterval(gameCountdownTimer);
-            clearInterval(gameSpawnTimer);
-            clearTimeout(gameScoreSyncTimer);
-            gameLoopTimer = null;
-            gameCountdownTimer = null;
-            gameSpawnTimer = null;
-            gameScoreSyncTimer = null;
-        };
-
-        const startGamePageRuntime = () => {
-            stopGameRuntime();
-            const room = getGameRoomById(activeGameRoomId);
-            if (!room || !currentUser) return;
-            if (room.status === 'countdown') {
-                gameCountdownTimer = setInterval(async () => {
-                    const currentRoom = getGameRoomById(activeGameRoomId);
-                    if (!currentRoom) return;
-                    const startMs = new Date(currentRoom.start_at).getTime();
-                    const diff = Math.ceil((startMs - Date.now()) / 1000);
-                    const el = document.getElementById('gameCountdown');
-                    if (el) el.textContent = diff > 0 ? String(diff) : 'Start!';
-                    if (Date.now() >= startMs) {
-                        clearInterval(gameCountdownTimer);
-                        if (currentRoom.status === 'countdown') {
-                            await supabase.from('game_rooms').update({ status: 'playing' }).eq('id', currentRoom.id).eq('status', 'countdown');
-                        }
-                        scheduleFetchData(80);
-                    }
-                }, 250);
-            }
-            if (room.status === 'playing') {
-                localGameScore = getScoreFromRoom(room, currentUser.email);
-                localGameMultiplier = 1;
-                localGameSpeedMode = false;
-                spawnGameItem();
-                gameSpawnTimer = setInterval(spawnGameItem, 650);
-            }
-        };
-
-        const queueGameScoreSync = () => {
-            clearTimeout(gameScoreSyncTimer);
-            gameScoreSyncTimer = setTimeout(async () => {
-                const room = getGameRoomById(activeGameRoomId);
-                if (!room || !currentUser || room.status !== 'playing') return;
-                const { error } = await supabase.rpc('update_game_score', { p_room_id: room.id, p_score: localGameScore });
-                if (error) {
-                    const scores = { ...(room.scores || {}) };
-                    scores[currentUser.email] = localGameScore;
-                    await supabase.from('game_rooms').update({ scores }).eq('id', room.id);
-                }
-            }, 120);
-        };
-
-        const spawnGameItem = () => {
-            const room = getGameRoomById(activeGameRoomId);
-            const area = document.getElementById('gameArea');
-            if (!room || !area || !currentUser || room.status !== 'playing') return;
-            const types = ['money', 'money', 'money', 'money', 'trap', 'bomb', 'lightning', 'x2'];
-            const type = types[Math.floor(Math.random() * types.length)];
-            const item = document.createElement('button');
-            item.type = 'button';
-            item.className = 'absolute rounded-full shadow-lg flex items-center justify-center font-black active:scale-90 transition-transform';
-            const size = type === 'bomb' ? 58 : 54;
-            const maxX = Math.max(0, area.clientWidth - size - 16);
-            item.style.width = size + 'px';
-            item.style.height = size + 'px';
-            item.style.left = (8 + Math.random() * maxX) + 'px';
-            item.style.top = '-70px';
-            item.style.zIndex = '5';
-            let duration = localGameSpeedMode ? 1400 : 2300;
-            let label = '💵';
-            let bg = 'background:#22c55e;color:white;';
-            if (type === 'trap') { label = '⚠️'; bg = 'background:#f59e0b;color:white;'; }
-            if (type === 'bomb') { label = '💣'; bg = 'background:#111827;color:white;'; }
-            if (type === 'lightning') { label = '⚡'; bg = 'background:#facc15;color:#111827;'; }
-            if (type === 'x2') { label = 'X2'; bg = 'background:#8b5cf6;color:white;'; }
-            item.style.cssText += bg;
-            item.innerHTML = `<span style="font-size:${type === 'x2' ? '17px' : '24px'}">${label}</span>`;
-            area.appendChild(item);
-            const start = performance.now();
-            let removed = false;
-            const animate = (now) => {
-                if (removed) return;
-                const progress = Math.min(1, (now - start) / duration);
-                item.style.top = (-70 + progress * (area.clientHeight + 100)) + 'px';
-                if (progress >= 1) { removed = true; item.remove(); return; }
-                requestAnimationFrame(animate);
-            };
-            requestAnimationFrame(animate);
-            item.addEventListener('click', async (e) => {
-                e.preventDefault();
-                if (removed) return;
-                removed = true;
-                item.remove();
-                await handleGameHit(type);
-            });
-        };
-
-        const handleGameHit = async (type) => {
-            const label = document.getElementById('gameBuffLabel');
-            if (type === 'money') localGameScore += 5 * localGameMultiplier;
-            if (type === 'trap') localGameScore = Math.max(0, localGameScore - 10);
-            if (type === 'bomb') localGameScore = Math.max(0, localGameScore - 20);
-            if (type === 'x2') {
-                localGameMultiplier = 2;
-                if (label) label.textContent = 'X2 activ 3 secunde';
-                setTimeout(() => { localGameMultiplier = 1; if (label) label.textContent = 'Scor 100 câștigă'; }, 3000);
-            }
-            if (type === 'lightning') {
-                localGameSpeedMode = true;
-                if (label) label.textContent = 'Fulger 3 secunde';
-                clearInterval(gameSpawnTimer);
-                gameSpawnTimer = setInterval(spawnGameItem, 350);
-                setTimeout(() => {
-                    localGameSpeedMode = false;
-                    clearInterval(gameSpawnTimer);
-                    gameSpawnTimer = setInterval(spawnGameItem, 650);
-                    if (label) label.textContent = 'Scor 100 câștigă';
-                }, 3000);
-            }
-            const scoreEl = document.getElementById('myGameScore');
-            if (scoreEl) scoreEl.textContent = localGameScore;
-            queueGameScoreSync();
-            if (localGameScore >= 100) await finishGameAsWinner();
-        };
-
-        const finishGameAsWinner = async () => {
-            const room = getGameRoomById(activeGameRoomId);
-            if (!room || !currentUser || room.status !== 'playing') return;
-            stopGameRuntime();
-            const scores = { ...(room.scores || {}) };
-            scores[currentUser.email] = localGameScore;
-            const pot = Number(room.bet_amount || 0) * 2;
-            const { data, error } = await supabase
-                .from('game_rooms')
-                .update({ status: 'finished', winner_email: currentUser.email, scores, finished_at: new Date().toISOString() })
-                .eq('id', room.id)
-                .neq('status', 'finished')
-                .select()
-                .single();
-            if (!error && data) {
-                await supabase.rpc('add_game_wallet_balance', { p_user_email: currentUser.email, p_amount: pot });
-                await supabase.from('game_transactions').insert([{
-                    user_email: currentUser.email,
-                    room_id: room.id,
-                    amount: pot,
-                    type: 'win',
-                    note: 'Câștig Prinde banii'
-                }]);
-                launchConfetti();
-            }
-            scheduleFetchData(120);
-        };
-
-
         // Actions & Modals globally available
         window.appActions = {
             selectRole: (role) => {
@@ -1507,148 +1054,6 @@
                 }
             },
             closeModal: () => { document.getElementById('modalContainer').innerHTML = ''; },
-            setBetAmount: (amount) => {
-                const input = document.getElementById('betAmountInput');
-                if (input) input.value = amount;
-            },
-
-            createGameRoom: async () => {
-                const input = document.getElementById('betAmountInput');
-                const btn = document.getElementById('createGameBtn');
-                const amount = parseFloat(input?.value || '0');
-                if (!currentUser) return alert('Trebuie să fii conectat.');
-                if (isNaN(amount) || amount <= 0) return alert('Alege pariul: 5 lei, 10 lei sau altă sumă.');
-                if (btn) { btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; btn.disabled = true; }
-                const room = {
-                    creator_email: currentUser.email,
-                    opponent_email: null,
-                    bet_amount: amount,
-                    status: 'pending',
-                    scores: { [currentUser.email]: 0 },
-                    created_at: new Date().toISOString()
-                };
-                const { data, error } = await supabase.from('game_rooms').insert([room]).select().single();
-                if (error) {
-                    alert('Eroare joc: ' + error.message + '\n\nRulează SQL-ul complet pentru tabelele de jocuri.');
-                    if (btn) { btn.innerHTML = 'Creează pariu'; btn.disabled = false; }
-                    return;
-                }
-                gameRooms = [data, ...gameRooms];
-                activeGameRoomId = data.id;
-                currentTab = 'gamePlay';
-                renderMain();
-                scheduleFetchData(300);
-            },
-
-            acceptGameRoom: async (roomId) => {
-                const room = getGameRoomById(roomId);
-                if (!room || !currentUser) return;
-                if (room.creator_email === currentUser.email) return alert('Așteptăm să accepte partenerul.');
-                const startAt = new Date(Date.now() + 4200).toISOString();
-                const scores = { ...(room.scores || {}), [currentUser.email]: 0 };
-                const { data, error } = await supabase.from('game_rooms').update({
-                    opponent_email: currentUser.email,
-                    status: 'countdown',
-                    agreed_at: new Date().toISOString(),
-                    start_at: startAt,
-                    scores
-                }).eq('id', roomId).eq('status', 'pending').select().single();
-                if (error) return alert('Nu am putut accepta jocul: ' + error.message);
-                gameRooms = gameRooms.map(r => String(r.id) === String(roomId) ? data : r);
-                activeGameRoomId = roomId;
-                currentTab = 'gamePlay';
-                renderMain();
-                scheduleFetchData(150);
-            },
-
-            openGameRoom: (roomId) => {
-                activeGameRoomId = roomId;
-                currentTab = 'gamePlay';
-                renderMain();
-            },
-
-            backFromGame: () => {
-                activeGameRoomId = null;
-                currentTab = 'games';
-                renderMain();
-            },
-
-            openWithdrawGameWalletModal: () => {
-                const balance = getGameBalance();
-                const myGoals = goals.filter(g => g.owner === currentUser.email && !isGoalCompleted(g));
-                if (balance <= 0) return alert('Nu ai sold în jocuri momentan.');
-                if (myGoals.length === 0) return alert('Nu ai obiective active în care să retragi banii.');
-                document.getElementById('modalContainer').innerHTML = `
-                    <div class="fixed inset-0 modal-backdrop flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
-                        <div class="bg-white dark:bg-slate-800 rounded-t-3xl sm:rounded-3xl shadow-xl w-full max-w-md p-6 fade-in relative">
-                            <div class="w-12 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full mx-auto mb-6 sm:hidden"></div>
-                            <h3 class="text-xl font-bold mb-1 text-slate-800 dark:text-white">Retrage la obiectiv</h3>
-                            <p class="text-sm text-slate-500 dark:text-slate-400 mb-5">Sold disponibil: <b>${balance} RON</b></p>
-                            <div class="space-y-4">
-                                <div>
-                                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Alege obiectivul</label>
-                                    <select id="withdrawGoalSelect" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl outline-none dark:text-white">
-                                        ${myGoals.map(g => `<option value="${safeText(g.id)}">${safeText(g.title)}</option>`).join('')}
-                                    </select>
-                                </div>
-                                <div class="relative">
-                                    <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-500 font-medium">RON</span>
-                                    <input type="number" id="withdrawAmountInput" min="1" max="${balance}" value="${balance}" class="w-full pl-14 pr-4 py-4 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl outline-none text-xl font-bold text-slate-800 dark:text-white">
-                                </div>
-                                <div class="flex gap-3 pt-2">
-                                    <button onclick="window.appActions.closeModal()" class="flex-1 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold py-3 rounded-xl">Anulează</button>
-                                    <button onclick="window.appActions.withdrawGameWalletToGoal()" id="withdrawGameBtn" class="flex-1 bg-green-500 hover:bg-green-600 text-white font-bold py-3 rounded-xl transition-colors">Retrage</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            },
-
-            withdrawGameWalletToGoal: async () => {
-                const balance = getGameBalance();
-                const goalId = document.getElementById('withdrawGoalSelect')?.value;
-                const amount = parseFloat(document.getElementById('withdrawAmountInput')?.value || '0');
-                const goal = goals.find(g => String(g.id) === String(goalId));
-                if (!goal) return alert('Alege un obiectiv valid.');
-                if (isNaN(amount) || amount <= 0) return alert('Sumă invalidă.');
-                if (amount > balance) return alert('Nu ai atât în Sold Jocuri.');
-                const btn = document.getElementById('withdrawGameBtn');
-                if (btn) { btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; btn.disabled = true; }
-                const newGoalAmount = Number(goal.current || 0) + amount;
-                const { error: walletError } = await supabase.rpc('add_game_wallet_balance', { p_user_email: currentUser.email, p_amount: -amount });
-                if (walletError) {
-                    alert('Eroare sold jocuri: ' + walletError.message);
-                    if (btn) { btn.innerHTML = 'Retrage'; btn.disabled = false; }
-                    return;
-                }
-                const { error: goalError } = await supabase.from('goals').update({ current: newGoalAmount }).eq('id', goal.id);
-                if (goalError) alert('Soldul s-a retras, dar obiectivul nu s-a actualizat: ' + goalError.message);
-                else {
-                    await supabase.from('transactions').insert([{
-                        goal_id: goal.id,
-                        goal_title: goal.title,
-                        amount,
-                        from_role: currentUser.email,
-                        to_role: currentUser.email,
-                        date: new Date().toISOString().split('T')[0],
-                        timestamp: new Date().toISOString()
-                    }]);
-                    await supabase.from('game_transactions').insert([{
-                        user_email: currentUser.email,
-                        amount: -amount,
-                        type: 'withdraw_to_goal',
-                        note: 'Retras la obiectiv: ' + goal.title
-                    }]);
-                }
-                goals = goals.map(g => String(g.id) === String(goal.id) ? { ...g, current: newGoalAmount } : g);
-                gameWallets = gameWallets.map(w => w.user_email === currentUser.email ? { ...w, balance: Number(w.balance || 0) - amount } : w);
-                if (!gameWallets.find(w => w.user_email === currentUser.email)) gameWallets.push({ user_email: currentUser.email, balance: balance - amount });
-                window.appActions.closeModal();
-                renderMain(true);
-                scheduleFetchData(300);
-            },
-
 
             calcAdd: (value) => {
                 const input = document.getElementById('calcInput');
