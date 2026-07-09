@@ -13,7 +13,7 @@ self.addEventListener('push', (event) => {
     data: {
       url: data.url || '/'
     },
-    renotify: true
+    renotify: false
   };
 
   event.waitUntil(self.registration.showNotification(title, options));
