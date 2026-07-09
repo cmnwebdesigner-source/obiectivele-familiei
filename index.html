@@ -625,16 +625,18 @@
 
 
     .family-code-card {
-      margin-top: 10px;
-      padding: 10px;
-      border-radius: 16px;
+      margin-top: 8px;
+      padding: 8px 10px;
+      border-radius: 14px;
     }
     .family-code-row { display:grid; grid-template-columns: minmax(0, 1fr) auto; gap:7px; align-items:end; }
-    .family-code-card .label { font-size: 10px; margin-bottom: 4px; }
-    .family-code-card .input { padding: 9px 10px; border-radius: 12px; font-size: 12px; min-height: 39px; }
-    .family-code-card .btn { padding: 9px 11px; border-radius: 12px; white-space: nowrap; min-height: 39px; font-size: 12px; }
+    .family-code-card .label { font-size: 10px; margin-bottom: 3px; }
+    .family-code-card .input { padding: 8px 10px; border-radius: 11px; font-size: 12px; min-height: 36px; }
+    .family-code-card .btn { padding: 8px 10px; border-radius: 11px; white-space: nowrap; min-height: 36px; font-size: 12px; }
+    .family-code-lock { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+    .family-code-value { display:inline-flex; align-items:center; justify-content:center; padding:7px 12px; min-width:78px; border-radius:12px; background:var(--soft); border:1px solid var(--line); font-size:13px; letter-spacing:.12em; color:var(--ink); }
+    .family-save-status { font-size: 11px; color: var(--success); font-weight: 600; white-space:nowrap; }
     .family-code-note { font-size: 9.5px; color: var(--muted); line-height: 1.25; margin-top: 5px; }
-    .family-save-status { min-height: 16px; margin-top: 4px; font-size: 11px; color: var(--success); font-weight: 500; }
     .profile-category-grid { display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom: 14px; }
     .profile-category-card {
       border: 1px solid var(--line);
@@ -1159,15 +1161,14 @@
           <p>Aplicația vă ajută să urmăriți obiectivele personale și comune, banii puși sau primiți, istoricul pe zile, statisticile și calculele salvate. Datele sunt sincronizate între telefoanele voastre.</p>
         </div>
         <div class="card family-code-card mb-3">
-          <div class="family-code-row">
+          <div class="family-code-lock">
             <div>
               <p class="label">Cod familie</p>
-              <input id="familyCodeSettingsInput" class="input" value="${escapeHTML(familyCode || DEFAULT_FAMILY_CODE)}" style="text-transform:uppercase; letter-spacing:.04em;" oninput="this.value=this.value.toLocaleUpperCase('ro-RO').replace(/[^A-Z0-9ĂÂÎȘŞȚŢ_-]/g,'')">
+              <div class="family-code-value">${escapeHTML(familyCode || DEFAULT_FAMILY_CODE)}</div>
             </div>
-            <button class="btn btn-soft" onclick="window.appActions.saveFamilyCode()">Salvează</button>
+            <div id="familyCodeSavedStatus" class="family-save-status">Salvat</div>
           </div>
-          <div id="familyCodeSavedStatus" class="family-save-status">${familyCodeStatus || (familyCode ? 'Salvat' : '')}</div>
-          <p class="family-code-note">Poți modifica oricând codul. Pentru voi: 0706.</p>
+          <p class="family-code-note">Codul este salvat și blocat pentru familia voastră.</p>
         </div>
         ${profileGoalSections(currentUser.email, true)}
         ${commonGoalSections()}`;
@@ -1457,11 +1458,12 @@
       },
 
       async saveFamilyCode() {
-        const newCode = normalizeFamilyCode(document.getElementById('familyCodeSettingsInput')?.value || DEFAULT_FAMILY_CODE);
+        const newCode = normalizeFamilyCode(document.getElementById('familyCodeSettingsInput')?.value || familyCode || DEFAULT_FAMILY_CODE);
         if (!newCode) return alert('Scrie un cod familie.');
         const oldCode = familyCode;
         familyCode = newCode;
         localStorage.setItem(userFamilyStorageKey(), familyCode);
+        localStorage.setItem('familyCodeLocked:' + currentUser.id, '1');
         try {
           const rpc = await supabase.rpc('set_my_family_code', { p_family_code: familyCode });
           if (rpc.error) {
@@ -1479,6 +1481,7 @@
           familyCodeStatus = 'Salvat';
           const saved = document.getElementById('familyCodeSavedStatus');
           if (saved) saved.textContent = 'Salvat';
+          renderApp(true);
         } catch (error) {
           familyCode = oldCode;
           localStorage.setItem(userFamilyStorageKey(), familyCode);
