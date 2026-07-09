@@ -1308,6 +1308,8 @@
       else if (currentPage === 'calendar') { content = calendarPageHTML(); nav = false; }
       else if (currentPage === 'piggy') { content = piggyPageHTML(); nav = false; }
       else if (currentPage === 'games') { content = gamesPageHTML(); nav = false; }
+      else if (currentPage === 'flappyLobby') { content = flappyLobbyHTML(); nav = false; }
+      else if (currentPage === 'flappyGame') { content = flappyGameHTML(); nav = false; }
       else if (currentPage === 'moneyHistory') { content = moneyHistoryPageHTML(); nav = false; }
       else if (currentPage === 'goalStats') { content = statsHTML(); nav = false; }
       else if (currentPage === 'goalList') { content = goalListPageHTML(); nav = false; }
@@ -1783,12 +1785,16 @@
     }
 
     function gameWalletHTML() {
+      const balance = gameWalletBalance();
       return `<div class="game-wallet-card mb-4">
-        <div>
+        <div class="min-w-0">
           <span>Sold Jocuri</span>
-          <b>${money(gameWalletBalance())} RON</b>
+          <b>${money(balance)} RON</b>
         </div>
-        <div class="icon-btn" style="width:48px;height:48px;border-radius:18px;color:#2563eb">${svg.gamepad}</div>
+        <div class="flex items-center gap-2 shrink-0">
+          ${balance > 0 ? `<button class="btn btn-soft" style="padding:10px 12px;border-radius:14px;min-height:40px;" onclick="event.stopPropagation(); window.appActions.openGameWithdrawModal()">Retrage</button>` : ''}
+          <div class="icon-btn" style="width:48px;height:48px;border-radius:18px;color:#2563eb">${svg.gamepad}</div>
+        </div>
       </div>`;
     }
 
@@ -2568,6 +2574,64 @@
       },
 
 
+
+      openGameWithdrawModal() {
+        const balance = gameWalletBalance();
+        if (balance <= 0) return alert('Soldul jocurilor este 0.');
+        const activeGoals = goals
+          .filter(g => goalBelongsToFamily(g) && !isGoalDone(g))
+          .sort((a, b) => String(a.title || '').localeCompare(String(b.title || ''), 'ro'));
+        if (!activeGoals.length) return alert('Nu există niciun obiectiv activ în care să retragi banii.');
+        modal.innerHTML = `<div class="modal-backdrop"><div class="sheet"><div class="grab"></div>
+          <h3 class="text-xl font-medium mb-1">Retrage din Sold Jocuri</h3>
+          <p class="text-sm muted mb-4">Alege obiectivul și suma pe care vrei să o muți.</p>
+          <div class="space-y-3">
+            <div><p class="label">Obiectiv</p><select id="gameWithdrawGoalInput" class="input">${activeGoals.map(g => {
+              const remaining = Math.max(0, Number(g.target || 0) - Number(g.current || 0));
+              return `<option value="${g.id}">${escapeHTML(String(g.title || '').toUpperCase())} · lipsă ${money(remaining)} RON</option>`;
+            }).join('')}</select></div>
+            <div><p class="label">Sumă</p><input id="gameWithdrawAmountInput" class="input" inputmode="decimal" placeholder="Ex. 10" value="${String(balance).replace('.', ',')}"></div>
+            <div class="grid grid-cols-2 gap-2 pt-2"><button class="btn btn-soft btn-full" onclick="window.appActions.closeModal()">Anulează</button><button id="gameWithdrawBtn" class="btn btn-gold btn-full" onclick="window.appActions.withdrawGameToGoal()">Retrage</button></div>
+          </div>
+        </div></div>`;
+      },
+      async withdrawGameToGoal() {
+        const goalId = document.getElementById('gameWithdrawGoalInput')?.value || '';
+        const amount = parseAmount(document.getElementById('gameWithdrawAmountInput')?.value || '');
+        const goal = goals.find(g => g.id === goalId);
+        const balance = gameWalletBalance();
+        if (!goal) return alert('Alege un obiectiv.');
+        if (!Number.isFinite(amount) || amount <= 0) return alert('Sumă invalidă.');
+        if (toCents(amount) > toCents(balance)) return alert('Nu ai atât în Sold Jocuri.');
+        const remaining = Math.max(0, Number(goal.target || 0) - Number(goal.current || 0));
+        if (toCents(amount) > toCents(remaining)) return alert('Suma depășește cât mai lipsește la obiectiv.');
+        const btn = document.getElementById('gameWithdrawBtn');
+        if (btn) { btn.textContent = 'Retrag...'; btn.disabled = true; }
+        const oldGoal = Number(goal.current || 0);
+        const wallet = gameWallets.find(w => w.user_email === currentUser.email && w.family_code === familyCode);
+        const oldWallet = Number(wallet?.balance || 0);
+        try {
+          const { data, error } = await supabase.rpc('withdraw_game_to_goal', {
+            p_user_email: currentUser.email,
+            p_family_code: familyCode,
+            p_goal_id: goalId,
+            p_amount: amount
+          });
+          if (error) throw error;
+          const payload = Array.isArray(data) ? data[0] : data;
+          goal.current = Number(payload?.goal_current ?? (oldGoal + amount));
+          if (wallet) wallet.balance = Number(payload?.wallet_balance ?? (oldWallet - amount));
+          else gameWallets.push({ user_email: currentUser.email, family_code: familyCode, balance: Number(payload?.wallet_balance ?? Math.max(0, oldWallet - amount)), updated_at: new Date().toISOString() });
+          this.closeModal();
+          suppressSoftUntil = Date.now() + 1500;
+          renderApp(true);
+          if (oldGoal < Number(goal.target || 0) && goal.current >= Number(goal.target || 0)) markGoalCompleted(goal);
+          scheduleSoftRefresh();
+        } catch (error) {
+          alert('Eroare la retragere: ' + (error.message || error));
+          if (btn) { btn.textContent = 'Retrage'; btn.disabled = false; }
+        }
+      },
 
       async sendFlappyInvite(opponentEmailValue) {
         const custom = parseAmount(document.getElementById('customBetInput')?.value || '');
