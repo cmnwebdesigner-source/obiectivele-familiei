@@ -126,6 +126,17 @@
       letter-spacing: -.02em;
     }
     .section-head small { color: var(--muted); font-weight: 400; }
+    .clear-history-btn {
+      border: 0;
+      background: rgba(239,68,68,.08);
+      color: #dc2626;
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 10px;
+      font-weight: 500;
+      line-height: 1;
+    }
+    .clear-history-btn:active { transform: scale(.96); }
 
     .card {
       border-radius: 26px;
@@ -1220,7 +1231,7 @@
         </div>
 
         <div class="section">
-          <div class="section-head"><span>Ultimele mișcări</span><small>azi</small></div>
+          <div class="section-head"><span>Ultimele mișcări</span>${todayTransactions.length ? `<button class="clear-history-btn" onclick="window.appActions.clearDayHistory(event)">Șterge istoric</button>` : `<small>azi</small>`}</div>
           <div class="history-list space-y-2">${todayTransactions.length ? todayTransactions.map(transactionRow).join('') : emptyHTML('Nicio mișcare azi.')}</div>
         </div>`;
     }
@@ -1281,7 +1292,7 @@
             <div class="min-w-0">
               <p class="label">Pușculiță comună</p>
               <h2 class="piggy-total-large">${money(balance)} RON</h2>
-              <p class="piggy-target-note">Target vizual: 100 RON. Puteți adăuga în continuare, iar când vreți o spargeți și pornește de la 0.</p>
+              <p class="piggy-target-note">Micile monede strânse împreună devin un gest frumos pentru voi. Când simțiți că e momentul, spargeți pușculița și o luați de la capăt.</p>
             </div>
           </div>
           <div class="piggy-progress-big"><span style="width:${info.percent}%"></span></div>
@@ -1295,11 +1306,11 @@
           <button class="piggy-break-btn" ${balance <= 0 ? 'disabled' : ''} onclick="window.appActions.breakPiggy()">${svg.pig} Sparge pușculița</button>
         </div>
         <div class="section">
-          <div class="section-head"><span>Pușculițe sparte</span><small>${breakHistory.length}</small></div>
+          <div class="section-head"><span>Pușculițe sparte</span>${breakHistory.length ? `<button class="clear-history-btn" onclick="window.appActions.clearPiggyHistory('break')">Șterge istoric</button>` : `<small>0</small>`}</div>
           <div class="space-y-2">${breakHistory.length ? breakHistory.map(piggyHistoryRow).join('') : emptyHTML('Nu ai spart încă pușculița.')}</div>
         </div>
         <div class="section">
-          <div class="section-head"><span>Istoric monede</span><small>${coinHistory.length}</small></div>
+          <div class="section-head"><span>Istoric monede</span>${coinHistory.length ? `<button class="clear-history-btn" onclick="window.appActions.clearPiggyHistory('coin')">Șterge istoric</button>` : `<small>0</small>`}</div>
           <div class="space-y-2">${coinHistory.length ? coinHistory.map(piggyHistoryRow).join('') : emptyHTML('Nu există încă monede puse.')}</div>
         </div>`;
     }
@@ -1407,7 +1418,7 @@
           </div>
           <span class="text-sm" style="color:${totalDay < 0 ? 'var(--danger)' : 'var(--success)'}">${totalDay >= 0 ? '+' : ''}${money(totalDay)} RON</span>
         </div>
-        <div class="section"><div class="section-head"><span>Mișcări</span><small>${selectedTransactions.length}</small></div><div class="history-list space-y-2">${selectedTransactions.length ? selectedTransactions.map(transactionRow).join('') : emptyHTML('Nicio mișcare în ziua asta.')}</div></div>`;
+        <div class="section"><div class="section-head"><span>Mișcări</span>${selectedTransactions.length ? `<button class="clear-history-btn" onclick="window.appActions.clearDayHistory(event)">Șterge istoric</button>` : `<small>0</small>`}</div><div class="history-list space-y-2">${selectedTransactions.length ? selectedTransactions.map(transactionRow).join('') : emptyHTML('Nicio mișcare în ziua asta.')}</div></div>`;
     }
 
     function partnerHTML() {
@@ -1535,7 +1546,7 @@
         <div class="calc-grid mb-4">${keys.map(k => `<button class="calc-key ${['÷','×','-','+'].includes(k) ? 'op' : k==='C' ? 'clear' : ''}" onclick="window.appActions.calcPress('${k}')">${k}</button>`).join('')}</div>
         <div class="grid grid-cols-2 gap-2 mb-4"><button class="btn btn-soft btn-full" onclick="window.appActions.calcBack()">Șterge</button><button class="btn btn-gold btn-full" onclick="window.appActions.calcEquals()">=</button></div>
         <div class="card mb-4"><p class="label">Notiță</p><textarea id="calcNoteInput" class="input" rows="2" placeholder="Pentru ce e calculul?"></textarea><button id="saveCalcBtn" class="btn btn-gold btn-full mt-3" onclick="window.appActions.saveCalc()">Salvează Calcul</button></div>
-        <div class="section"><div class="section-head"><span>Calcule salvate</span><small>${calculatorHistory.length}</small></div><div class="space-y-2">${calculatorHistory.length ? calculatorHistory.map(c => `<div class="card"><p class="text-sm">${escapeHTML(c.expression)} = ${escapeHTML(c.result)}</p>${c.note ? `<p class="text-xs muted mt-1">${escapeHTML(c.note)}</p>` : ''}</div>`).join('') : emptyHTML('Nu ai calcule salvate.')}</div></div>`;
+        <div class="section"><div class="section-head"><span>Calcule salvate</span>${calculatorHistory.length ? `<button class="clear-history-btn" onclick="window.appActions.clearCalculatorHistory()">Șterge istoric</button>` : `<small>0</small>`}</div><div class="space-y-2">${calculatorHistory.length ? calculatorHistory.map(c => `<div class="card"><p class="text-sm">${escapeHTML(c.expression)} = ${escapeHTML(c.result)}</p>${c.note ? `<p class="text-xs muted mt-1">${escapeHTML(c.note)}</p>` : ''}</div>`).join('') : emptyHTML('Nu ai calcule salvate.')}</div></div>`;
     }
 
     function statsHTML() {
@@ -1553,7 +1564,7 @@
         ${backButton()}
         <div class="top-card mb-4"><p class="muted text-xs">Statistici</p><h2 class="text-2xl font-medium tracking-[-.03em]">${escapeHTML(String(goal.title || '').toUpperCase())}</h2><p class="muted text-sm mt-1">${money(current)} din ${money(target)} RON</p><div class="progress mt-4 ${percent>=100?'done':''}"><span style="width:${percent}%"></span></div>${percent >= 100 ? completedContributionHTML(goal) : ''}${goal.owner === currentUser.email && percent < 100 ? `<button class="btn btn-soft btn-full mt-3" onclick="window.appActions.openEditGoal('${goal.id}')">Editează obiectivul</button>` : ''}</div>
         <div class="stat-grid mb-4"><div class="stat-mini"><span>Pus</span><b>${money(added)}</b></div><div class="stat-mini"><span>Scos</span><b>${money(removed)}</b></div><div class="stat-mini"><span>Mișcări</span><b>${list.length}</b></div></div>
-        <div class="section"><div class="section-head"><span>Pe zile</span></div><div class="space-y-3">${dates.length ? dates.map(d => `<div class="card"><div class="flex justify-between mb-2"><span class="text-sm capitalize">${formatFullDate(d)}</span><span class="text-sm muted">${byDate[d].length}</span></div><div class="space-y-2">${byDate[d].map(transactionRow).join('')}</div></div>`).join('') : emptyHTML('Nu există încă statistici.')}</div></div>`;
+        <div class="section"><div class="section-head"><span>Pe zile</span>${list.length ? `<button class="clear-history-btn" onclick="window.appActions.clearGoalHistory('${goal.id}')">Șterge istoric</button>` : ``}</div><div class="space-y-3">${dates.length ? dates.map(d => `<div class="card"><div class="flex justify-between mb-2"><span class="text-sm capitalize">${formatFullDate(d)}</span><span class="text-sm muted">${byDate[d].length}</span></div><div class="space-y-2">${byDate[d].map(transactionRow).join('')}</div></div>`).join('') : emptyHTML('Nu există încă statistici.')}</div></div>`;
     }
 
     function transactionRow(t) {
@@ -2055,8 +2066,78 @@
           e.target.value = '';
         }
       },
+      async deleteTransactionsByIds(ids, label = 'istoric') {
+        const cleanIds = (ids || []).filter(id => id && !String(id).startsWith('local-'));
+        if (!cleanIds.length) return;
+        if (!confirm('Ștergi acest istoric?')) return;
+        const before = transactions.slice();
+        transactions = transactions.filter(t => !cleanIds.includes(t.id));
+        suppressSoftUntil = Date.now() + 900;
+        renderApp(true);
+        const { error } = await supabase.from('transactions').delete().in('id', cleanIds);
+        if (error) {
+          transactions = before;
+          renderApp(true);
+          alert('Eroare la ștergere ' + label + ': ' + error.message);
+          return;
+        }
+        scheduleSoftRefresh();
+      },
+      async clearDayHistory(event) {
+        if (event) event.stopPropagation();
+        const ids = transactions
+          .filter(t => transactionBelongsToFamily(t) && String(t.date).slice(0,10) === selectedDate)
+          .map(t => t.id);
+        await window.appActions.deleteTransactionsByIds(ids, 'istoric zi');
+      },
+      async clearPiggyHistory(type) {
+        const ids = piggyTransactions()
+          .filter(t => type === 'break' ? Number(t.amount || 0) < 0 : Number(t.amount || 0) > 0)
+          .map(t => t.id);
+        await window.appActions.deleteTransactionsByIds(ids, 'istoric pușculiță');
+      },
+      async clearGoalHistory(goalId) {
+        const ids = transactions
+          .filter(t => transactionBelongsToFamily(t) && t.goal_id === goalId)
+          .map(t => t.id);
+        await window.appActions.deleteTransactionsByIds(ids, 'istoric obiectiv');
+      },
+      async clearCalculatorHistory() {
+        if (!calculatorHistory.length) return;
+        if (!confirm('Ștergi istoricul calculatorului?')) return;
+        const before = calculatorHistory.slice();
+        calculatorHistory = [];
+        renderApp(true);
+        const { error } = await supabase.from('calculator_history').delete().eq('user_email', currentUser.email);
+        if (error) {
+          calculatorHistory = before;
+          renderApp(true);
+          alert('Eroare la ștergere istoric: ' + error.message);
+          return;
+        }
+        scheduleSoftRefresh();
+      },
       toggleTheme() { const dark = document.body.classList.toggle('dark-mode'); localStorage.setItem('appTheme', dark ? 'dark' : 'light'); },
-      async logout() { localStorage.removeItem(PIN_SESSION_KEY); currentUser = null; familyCode = ''; goals = []; transactions = []; profiles = []; calculatorHistory = []; dataLoadedOnce = false; completedNotified = new Set(); authHTML(true); },
+      async logout() {
+        try { if (subscription) { await supabase.removeChannel(subscription); subscription = null; } } catch (_) {}
+        try { modal.innerHTML = ''; } catch (_) {}
+        localStorage.removeItem(PIN_SESSION_KEY);
+        localStorage.removeItem('keepLoggedIn');
+        currentUser = null;
+        familyCode = '';
+        familyCodeStatus = '';
+        goals = [];
+        transactions = [];
+        profiles = [];
+        calculatorHistory = [];
+        currentPage = 'home';
+        previousPage = 'home';
+        dataLoadedOnce = false;
+        completedNotified = new Set();
+        completedHold = {};
+        suppressSoftUntil = 0;
+        authHTML(true);
+      },
       calcPress(v) { if (v === 'C') { calcExpression=''; calcResult='0'; renderApp(); return; } calcExpression += v === '×' ? '*' : v === '÷' ? '/' : v; renderApp(); },
       calcBack() { calcExpression = calcExpression.slice(0,-1); renderApp(); },
       calcEquals() { try { if (!/^[0-9+\-*/().\s]+$/.test(calcExpression)) throw new Error(); const r = Function('"use strict";return ('+calcExpression+')')(); calcResult = Number.isFinite(Number(r)) ? String(Math.round(Number(r)*100)/100) : 'Eroare'; } catch { calcResult='Eroare'; } renderApp(); },
