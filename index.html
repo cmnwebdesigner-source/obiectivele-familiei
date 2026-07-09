@@ -1647,31 +1647,12 @@
     }
 
     function animatePiggyCoin(event, cents) {
+      // Doar efect de apăsare pe buton. Animația cu bănuțul zburător a fost scoasă.
       try {
         const btn = event?.currentTarget || event?.target?.closest?.('.coin-btn');
-        if (btn) {
-          btn.classList.add('pressed');
-          setTimeout(() => btn.classList.remove('pressed'), 190);
-        }
-
-        const startRect = btn?.getBoundingClientRect?.();
-        const targetEl = document.querySelector('.piggy-big-icon') || document.querySelector('.top-piggy .piggy-icon-box') || document.querySelector('.piggy-badge');
-        const targetRect = targetEl?.getBoundingClientRect?.();
-        if (!startRect || !targetRect) return;
-
-        const coin = document.createElement('div');
-        coin.className = 'piggy-flying-coin';
-        coin.textContent = cents === 1 ? '1b' : cents === 10 ? '10b' : '50b';
-        const startX = startRect.left + startRect.width / 2;
-        const startY = startRect.top + startRect.height / 2;
-        const targetX = targetRect.left + targetRect.width / 2;
-        const targetY = targetRect.top + targetRect.height / 2;
-        coin.style.left = startX + 'px';
-        coin.style.top = startY + 'px';
-        coin.style.setProperty('--coin-x', (targetX - startX) + 'px');
-        coin.style.setProperty('--coin-y', (targetY - startY) + 'px');
-        document.body.appendChild(coin);
-        setTimeout(() => coin.remove(), 820);
+        if (!btn) return;
+        btn.classList.add('pressed');
+        setTimeout(() => btn.classList.remove('pressed'), 190);
       } catch (_) {}
     }
 
@@ -1794,7 +1775,7 @@
       openEditGoal(id) {
         const g = goals.find(x => x.id === id); if (!g) return;
         if (g.owner !== currentUser.email) return alert('Poți edita doar obiectivul tău.');
-        modal.innerHTML = `<div class="modal-backdrop"><div class="sheet"><div class="grab"></div><h3 class="text-xl font-medium mb-1">Editează obiectivul</h3><p class="text-sm muted mb-2">${escapeHTML(String(g.title || '').toUpperCase())}</p><p class="edit-goal-hint">Poți mări sau scădea suma obiectivului, apoi apeși Salvează.</p><div class="space-y-3 mt-4"><input id="editGoalTargetInput" type="text" inputmode="decimal" class="input" placeholder="Suma nouă" value="${Number(g.target || 0)}"><div class="grid grid-cols-2 gap-2 pt-2"><button class="btn btn-soft btn-full" onclick="window.appActions.closeModal()">Anulează</button><button id="editGoalBtn" class="btn btn-gold btn-full" onclick="window.appActions.saveEditGoalTarget('${id}')">Salvează</button></div></div></div></div>`;
+        modal.innerHTML = `<div class="modal-backdrop"><div class="sheet"><div class="grab"></div><h3 class="text-xl font-medium mb-1">Editează obiectivul</h3><p class="text-sm muted mb-2">${escapeHTML(String(g.title || '').toUpperCase())}</p><p class="edit-goal-hint">Poți mări sau scădea suma obiectivului, apoi apeși Salvează.</p><div class="space-y-3 mt-4"><input id="editGoalTargetInput" type="text" inputmode="decimal" class="input" placeholder="Suma nouă" value="${Number(g.target || 0)}"><div class="grid grid-cols-2 gap-2 pt-2"><button class="btn btn-soft btn-full" onclick="window.appActions.closeModal()">Anulează</button><button id="editGoalBtn" class="btn btn-gold btn-full" onclick="window.appActions.saveEditGoalTarget('${id}')">Salvează</button></div><button id="deleteGoalBtn" class="btn btn-full mt-2" style="background:rgba(239,68,68,.10);border:1px solid rgba(239,68,68,.22);color:#ef4444" onclick="window.appActions.deleteGoal('${id}')">Șterge obiectivul</button><p class="text-[11px] muted text-center">Se șterge obiectivul și istoricul lui de peste tot.</p></div></div></div>`;
       },
       async saveEditGoalTarget(id) {
         const g = goals.find(x => x.id === id); if (!g) return;
@@ -1826,6 +1807,40 @@
           g.target = oldTarget;
           renderApp(true);
           alert('Eroare la editare: ' + (error.message || error));
+        }
+      },
+      async deleteGoal(id) {
+        const g = goals.find(x => x.id === id); if (!g) return;
+        if (g.owner !== currentUser.email) return alert('Poți șterge doar obiectivul tău.');
+        const ok = confirm('Sigur vrei să ștergi obiectivul? Se șterge și istoricul lui de peste tot.');
+        if (!ok) return;
+        const btn = document.getElementById('deleteGoalBtn');
+        if (btn) { btn.textContent = 'Se șterge...'; btn.disabled = true; }
+        const oldGoals = goals.slice();
+        const oldTransactions = transactions.slice();
+        goals = goals.filter(x => x.id !== id);
+        transactions = transactions.filter(t => t.goal_id !== id);
+        this.closeModal();
+        suppressSoftUntil = Date.now() + 1300;
+        renderApp(true);
+        try {
+          const rpc = await supabase.rpc('delete_goal_safe', { p_goal_id: id });
+          if (rpc.error) {
+            const msg = String(rpc.error.message || rpc.error.details || rpc.error.hint || '').toLowerCase();
+            const missingRpc = rpc.error.code === 'PGRST202' || msg.includes('could not find') || msg.includes('function');
+            if (!missingRpc) throw rpc.error;
+            const delTrans = await supabase.from('transactions').delete().eq('goal_id', id);
+            if (delTrans.error) throw delTrans.error;
+            const delGoal = await supabase.from('goals').delete().eq('id', id);
+            if (delGoal.error) throw delGoal.error;
+          }
+          suppressSoftUntil = Date.now() + 1300;
+          scheduleSoftRefresh();
+        } catch (error) {
+          goals = oldGoals;
+          transactions = oldTransactions;
+          renderApp(true);
+          alert('Eroare la ștergere: ' + (error.message || error));
         }
       },
       openMoney(id, mode) {
