@@ -1010,6 +1010,29 @@
     .flappy-score b { display:block; font-size:22px; font-weight:500; color:var(--text); line-height:1; margin-top:4px; }
     .invite-banner { position:fixed; left:50%; transform:translateX(-50%); top:14px; width:calc(100% - 28px); max-width:420px; z-index:80; background:var(--card); border:1px solid rgba(15,23,42,.10); border-radius:26px; padding:14px; box-shadow:0 22px 50px rgba(15,23,42,.18); }
     .invite-banner .btn { min-height:42px; }
+
+    .bingo-mode-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:9px; }
+    .bingo-mode-btn { min-height:48px; border-radius:18px; border:1px solid rgba(15,23,42,.08); background:rgba(255,255,255,.72); font-size:13px; color:var(--text); }
+    .bingo-mode-btn.active { background:var(--gold); color:#111827; border-color:transparent; }
+    .bingo-board-wrap { width:100%; overflow:hidden; border-radius:24px; background:rgba(255,255,255,.52); border:1px solid rgba(15,23,42,.08); padding:8px; }
+    .bingo-board { display:grid; gap:4px; width:100%; }
+    .bingo-cell { aspect-ratio:1/1; min-width:0; border:1px solid rgba(15,23,42,.08); border-radius:10px; background:rgba(255,255,255,.88); color:var(--text); font-size:clamp(10px, 2.4vw, 15px); font-weight:500; display:flex; align-items:center; justify-content:center; position:relative; overflow:hidden; }
+    .bingo-cell.marked { background:rgba(239,68,68,.10); border-color:rgba(239,68,68,.45); color:#dc2626; }
+    .bingo-cell.marked::after { content:'×'; position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:clamp(22px, 6vw, 42px); line-height:1; color:#dc2626; font-weight:600; opacity:.86; }
+    .bingo-cell.marked span { opacity:.26; }
+    .bingo-letters { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:8px; margin:10px 0; }
+    .bingo-letter { min-height:40px; border-radius:16px; display:flex; align-items:center; justify-content:center; background:rgba(15,23,42,.06); color:var(--muted); font-size:18px; font-weight:600; }
+    .bingo-letter.hit { background:rgba(34,197,94,.13); color:#16a34a; text-decoration:line-through; text-decoration-thickness:2px; }
+    .bingo-mini-info { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin:10px 0; }
+    .bingo-mini-info > div { border-radius:16px; padding:10px; background:var(--card); border:1px solid rgba(15,23,42,.08); text-align:center; }
+    .bingo-mini-info small { display:block; font-size:10px; color:var(--muted); }
+    .bingo-mini-info b { display:block; font-size:14px; color:var(--text); font-weight:500; margin-top:2px; }
+    .bingo-preview-card { border-radius:22px; padding:12px; background:rgba(15,23,42,.035); border:1px solid rgba(15,23,42,.07); }
+    .bingo-preview-grid { display:grid; gap:3px; margin-top:10px; }
+    .bingo-preview-cell { aspect-ratio:1/1; min-width:0; border-radius:8px; background:rgba(255,255,255,.82); border:1px solid rgba(15,23,42,.06); display:flex; align-items:center; justify-content:center; font-size:clamp(8px,2.1vw,12px); color:var(--text); }
+    body.dark-mode .bingo-mode-btn, body.dark-mode .bingo-cell, body.dark-mode .bingo-preview-card, body.dark-mode .bingo-preview-cell, body.dark-mode .bingo-mini-info > div, body.dark-mode .bingo-board-wrap { background:rgba(255,255,255,.07); border-color:rgba(255,255,255,.10); color:var(--text); }
+    body.dark-mode .bingo-mode-btn.active { background:var(--gold); color:#111827; }
+
     body.dark-mode .game-option-card, body.dark-mode .game-room-card, body.dark-mode .flappy-score, body.dark-mode .invite-banner { background:rgba(15,23,42,.86); border-color:rgba(255,255,255,.10); box-shadow:0 16px 38px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.04); }
     body.dark-mode .bet-btn { background:rgba(255,255,255,.07); border-color:rgba(255,255,255,.10); color:var(--text); }
     body.dark-mode .bet-btn.active { background:var(--gold); color:#111827; }
@@ -1062,6 +1085,7 @@
     let selectedGameRoomId = '';
     let selectedBetAmount = 5;
     let selectedBingoSize = 5;
+    let selectedBingoPreviewBoard = [];
     let inviteModalRoomId = '';
     let flappyState = null;
     let flappyLoop = null;
@@ -1878,24 +1902,35 @@
     }
 
     function gamesPageHTML() {
-      const withdrawals = gameTransactions.filter(t => String(t.type || '').toLowerCase() === 'withdraw' || Number(t.amount || 0) < 0).slice(0, 8);
       return `${backButton()}
-        ${gameWalletHTML()}
-        <button class="game-option-card mb-4" onclick="window.appActions.openFlappyLobby()">
+        <div class="top-card mb-4">
+          <div class="flex items-center gap-3">
+            <span class="icon-btn">${svg.gamepad}</span>
+            <div>
+              <p class="muted text-xs">Jocuri</p>
+              <h2 class="text-2xl font-medium tracking-[-.03em]">Alege jocul</h2>
+            </div>
+          </div>
+        </div>
+        <button class="game-option-card" onclick="window.appActions.openFlappyLobby()">
           <div class="flex items-center gap-3 min-w-0">
             <div class="game-cover">${svg.gamepad}</div>
             <div class="min-w-0 text-left">
               <p class="muted text-xs">Joc realtime</p>
               <h2 class="text-xl font-medium tracking-[-.03em]">BINGO</h2>
-              <p class="text-xs muted mt-1">Alege 5×5, 7×7 sau 10×10, puneți pariu și jucați pe telefoanele voastre.</p>
+              <p class="text-xs muted mt-1">5×5, 7×7 sau 10×10. Pariu, invitație și start împreună.</p>
             </div>
           </div>
-          <span class="game-pill live">Start</span>
-        </button>
-        ${latestRoomHTML()}
-        <div class="section">
-          <div class="section-head"><span>Istoric runde</span><small>${gameRoomsForMe().filter(r => r.status === 'finished').length}</small></div>
-          <div class="space-y-2">${gameRoomsForMe().filter(r => r.status === 'finished').slice(0,8).map(gameRoundRow).join('') || emptyHTML('Nu există runde finalizate încă.')}</div>
+          <span class="game-pill live">Deschide</span>
+        </button>`;
+    }
+
+    function gameHistorySectionsHTML() {
+      const withdrawals = gameTransactions.filter(t => String(t.type || '').toLowerCase() === 'withdraw' || Number(t.amount || 0) < 0).slice(0, 10);
+      const rounds = gameRoomsForMe().filter(r => r.status === 'finished').slice(0, 10);
+      return `<div class="section">
+          <div class="section-head"><span>Istoric runde</span><small>${rounds.length}</small></div>
+          <div class="space-y-2">${rounds.length ? rounds.map(gameRoundRow).join('') : emptyHTML('Nu există runde finalizate încă.')}</div>
         </div>
         <div class="section">
           <div class="section-head"><span>Retrageri</span><small>${withdrawals.length}</small></div>
@@ -1934,32 +1969,46 @@
     }
 
     function flappyLobbyHTML() {
-      const room = activeFlappyRoom();
+      const activeRoom = gameRoomsForMe().find(r => ['invite','accepted','countdown','playing'].includes(r.status));
+      const room = selectedGameRoomId ? (gameRooms.find(r => r.id === selectedGameRoomId) || activeRoom) : activeRoom;
       const opponent = partnerEmail() || (currentUser.email === 'ionut7628c@gmail.com' ? 'stan91874@gmail.com' : 'ionut7628c@gmail.com');
       const isCreator = room?.creator_email === currentUser?.email;
       const status = room?.status || '';
       const waiting = room && ['invite','accepted','countdown','playing'].includes(status);
+      const locked = room && ['invite','accepted','countdown','playing'].includes(status);
+      const boardGenerated = !!(room && (bingoState(room).boards[currentUser.email] || []).length);
       return `${backButton()}
         ${gameWalletHTML()}
         <div class="top-card mb-4">
-          <div class="flex items-center gap-3"><span class="icon-btn">${svg.gamepad}</span><div><p class="muted text-xs">BINGO</p><h2 class="text-2xl font-medium tracking-[-.03em]">Setări joc</h2></div></div>
-          <p class="text-sm muted mt-3">Alege modul și pariul. După invitație, partenerul primește Acceptă / Refuză, iar jocul începe după start.</p>
+          <div class="flex items-center gap-3"><span class="icon-btn">${svg.gamepad}</span><div><p class="muted text-xs">BINGO</p><h2 class="text-2xl font-medium tracking-[-.03em]">Meniu joc</h2></div></div>
+          <p class="text-sm muted mt-3">Alege categoria, pariul și trimite invitația. După accept, pornești runda cu START JOC.</p>
         </div>
         <div class="card mb-4">
-          <p class="label">Mod joc</p>
+          <p class="label">Categorie joc</p>
           <div class="bingo-mode-grid mb-4">
-            ${[5,7,10].map(v => `<button class="bingo-mode-btn ${Number(selectedBingoSize)===v?'active':''}" onclick="window.appActions.setBingoSize(${v})">${v}×${v}</button>`).join('')}
+            ${[5,7,10].map(v => `<button class="bingo-mode-btn ${Number(selectedBingoSize)===v?'active':''}" ${locked ? 'disabled' : ''} onclick="window.appActions.setBingoSize(${v})">${v}×${v}</button>`).join('')}
           </div>
           <p class="label">Pariu</p>
           <div class="bet-grid mb-3">
-            ${[5,10,20].map(v => `<button class="bet-btn ${Number(selectedBetAmount)===v?'active':''}" onclick="window.appActions.setGameBet(${v})">${v} RON</button>`).join('')}
+            ${[5,10,20].map(v => `<button class="bet-btn ${Number(selectedBetAmount)===v?'active':''}" ${locked ? 'disabled' : ''} onclick="window.appActions.setGameBet(${v})">${v} RON</button>`).join('')}
           </div>
-          <input id="customBetInput" class="input" inputmode="decimal" placeholder="Altă sumă" value="${[5,10,20].includes(Number(selectedBetAmount)) ? '' : money(selectedBetAmount)}">
+          <input id="customBetInput" class="input" inputmode="decimal" placeholder="Altă sumă" ${locked ? 'disabled' : ''} value="${[5,10,20].includes(Number(selectedBetAmount)) ? '' : money(selectedBetAmount)}">
+          <div class="bingo-preview-card mt-4">
+            <div class="flex items-center justify-between gap-3">
+              <div>
+                <p class="label" style="margin:0">Numerele tale</p>
+                <p class="text-[11px] muted mt-1">${boardGenerated ? 'Tabla este pregătită.' : 'Generează sau regenerează înainte de start.'}</p>
+              </div>
+              <button class="btn btn-soft" onclick="window.appActions.generateBingoNumbers('${room?.id || ''}')">Generează numere</button>
+            </div>
+            ${bingoPreviewHTML(room)}
+          </div>
         </div>
         ${waiting ? flappyRoomStatusHTML(room) : `<button class="btn btn-gold btn-full" onclick="window.appActions.sendFlappyInvite('${opponent}')">Trimite invitația</button>`}
         ${room && status === 'accepted' && isCreator ? `<button class="btn btn-gold btn-full mt-3" onclick="window.appActions.startFlappyRoom('${room.id}')">START JOC</button>` : ''}
         ${room && ['countdown','playing'].includes(status) ? `<button class="btn btn-soft btn-full mt-3" onclick="window.appActions.openFlappyRoom('${room.id}')">Intră în joc</button>` : ''}
-        ${room && status === 'finished' && isCreator ? `<button class="btn btn-gold btn-full mt-3" onclick="window.appActions.replayFlappyRoom('${room.id}')">Joacă din nou</button>` : ''}`;
+        ${room && status === 'finished' && isCreator ? `<button class="btn btn-gold btn-full mt-3" onclick="window.appActions.replayFlappyRoom('${room.id}')">Joacă din nou</button>` : ''}
+        <div class="mt-5">${gameHistorySectionsHTML()}</div>`;
     }
 
     function flappyRoomStatusHTML(room) {
@@ -1983,6 +2032,16 @@
         <div class="bingo-board" style="grid-template-columns:repeat(${st.size}, minmax(0, 1fr));">
           ${board.map((num, idx) => `<button class="bingo-cell ${marks.has(idx) ? 'marked' : ''}" onclick="window.appActions.markBingoCell('${room.id}', ${idx})"><span>${num}</span></button>`).join('')}
         </div>
+      </div>`;
+    }
+
+    function bingoPreviewHTML(room = null) {
+      const size = Number(room?.board_size || selectedBingoSize || 5);
+      const st = room ? bingoState(room) : null;
+      const board = (room && st?.boards?.[currentUser?.email]) || selectedBingoPreviewBoard || [];
+      if (!board.length) return `<div class="bingo-preview-grid" style="grid-template-columns:repeat(${Math.min(size, 5)}, minmax(0, 1fr));"><div class="text-xs muted" style="grid-column:1/-1;text-align:center;padding:14px 0;">Apasă „Generează numere”.</div></div>`;
+      return `<div class="bingo-preview-grid" style="grid-template-columns:repeat(${size}, minmax(0, 1fr));">
+        ${board.map(n => `<span class="bingo-preview-cell">${n}</span>`).join('')}
       </div>`;
     }
 
@@ -2518,10 +2577,16 @@
       openCalendar() { previousPage = currentPage; currentPage = 'calendar'; renderApp(); },
       openPiggy() { previousPage = currentPage; currentPage = 'piggy'; renderApp(); },
       openGames() { previousPage = currentPage; currentPage = 'games'; renderApp(); },
-      openFlappyLobby() { previousPage = currentPage; currentPage = 'flappyLobby'; renderApp(); },
+      openFlappyLobby() {
+        const active = gameRoomsForMe().find(r => ['invite','accepted','countdown','playing'].includes(r.status));
+        selectedGameRoomId = active ? active.id : '';
+        previousPage = currentPage;
+        currentPage = 'flappyLobby';
+        renderApp();
+      },
       openFlappyRoom(id) { selectedGameRoomId = id; previousPage = currentPage; currentPage = 'flappyGame'; renderApp(); },
       setGameBet(v) { selectedBetAmount = Number(v || 5); renderApp(); },
-      setBingoSize(v) { selectedBingoSize = [5,7,10].includes(Number(v)) ? Number(v) : 5; renderApp(); },
+      setBingoSize(v) { selectedBingoSize = [5,7,10].includes(Number(v)) ? Number(v) : 5; selectedBingoPreviewBoard = []; renderApp(); },
       resetFlappySelection() { selectedGameRoomId = ''; previousPage = 'games'; currentPage = 'flappyLobby'; renderApp(); },
       async replayFlappyRoom(id) {
         const room = gameRooms.find(r => r.id === id);
@@ -2529,6 +2594,7 @@
         selectedGameRoomId = '';
         selectedBingoSize = Number(room?.board_size || selectedBingoSize || 5);
         selectedBetAmount = Number(room?.bet_amount || selectedBetAmount || 5);
+        selectedBingoPreviewBoard = [];
         previousPage = 'games';
         currentPage = 'flappyLobby';
         renderApp(true);
@@ -2927,6 +2993,39 @@
         }
       },
 
+      async generateBingoNumbers(roomId = '') {
+        const room = roomId ? gameRooms.find(r => r.id === roomId) : null;
+        const size = Number(room?.board_size || selectedBingoSize || 5);
+        const board = createBingoBoard(size);
+        selectedBingoPreviewBoard = board;
+        if (!room || !['invite','accepted'].includes(room.status)) {
+          renderApp(true);
+          return;
+        }
+        const st = bingoState(room);
+        const localState = {
+          size,
+          boards: { ...(st.boards || {}), [currentUser.email]: board },
+          marks: st.marks || {},
+          lines: st.lines || {},
+          letters: st.letters || {}
+        };
+        room.game_state = localState;
+        renderApp(true);
+        try {
+          const { data, error } = await supabase.rpc('set_bingo_player_board', {
+            p_room_id: room.id,
+            p_player_email: currentUser.email,
+            p_board: board
+          });
+          if (error) throw error;
+          scheduleSoftRefresh(50);
+        } catch (error) {
+          alert('Eroare la generarea numerelor: ' + (error.message || error));
+          scheduleSoftRefresh(30);
+        }
+      },
+
       async sendFlappyInvite(opponentEmailValue) {
         const custom = parseAmount(document.getElementById('customBetInput')?.value || '');
         const bet = Number.isFinite(custom) && custom > 0 ? custom : Number(selectedBetAmount || 5);
@@ -2941,6 +3040,7 @@
             renderApp();
             return alert('Există deja o rundă activă. Folosește-o pe aceea sau așteaptă să se termine.');
           }
+          const creatorBoard = selectedBingoPreviewBoard.length === size * size ? selectedBingoPreviewBoard : [];
           const payload = {
             family_code: familyCode,
             game_type: GAME_TYPE_FLAPPY,
@@ -2948,7 +3048,7 @@
             opponent_email: opponentEmailValue,
             bet_amount: bet,
             board_size: size,
-            game_state: { size, boards:{}, marks:{}, lines:{}, letters:{} },
+            game_state: { size, boards: creatorBoard.length ? { [currentUser.email]: creatorBoard } : {}, marks:{}, lines:{}, letters:{} },
             status: 'invite',
             scores: {},
             finished_players: {}
@@ -2989,7 +3089,11 @@
         try {
           const size = Number(room.board_size || selectedBingoSize || 5);
           const startAt = new Date(Date.now() + 3200).toISOString();
-          const boards = { [room.creator_email]: createBingoBoard(size), [room.opponent_email]: createBingoBoard(size) };
+          const oldState = bingoState(room);
+          const boards = {
+            [room.creator_email]: (oldState.boards?.[room.creator_email] || []).length === size * size ? oldState.boards[room.creator_email] : createBingoBoard(size),
+            [room.opponent_email]: (oldState.boards?.[room.opponent_email] || []).length === size * size ? oldState.boards[room.opponent_email] : createBingoBoard(size)
+          };
           const state = { size, boards, marks:{ [room.creator_email]:[], [room.opponent_email]:[] }, lines:{ [room.creator_email]:[], [room.opponent_email]:[] }, letters:{ [room.creator_email]:0, [room.opponent_email]:0 } };
           const scores = { [room.creator_email]:0, [room.opponent_email]:0 };
           const { data, error } = await supabase.from('game_rooms').update({ status:'countdown', start_at:startAt, board_size:size, game_state:state, scores, finished_players:{}, winner_email:null, finished_at:null }).eq('id', id).select('*').maybeSingle();
