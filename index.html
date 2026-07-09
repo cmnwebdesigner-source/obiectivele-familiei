@@ -929,6 +929,7 @@
     let piggySaveQueue = Promise.resolve();
     let selectedGoalListKind = '';
     let selectedGoalListEmail = '';
+    let selectedPartnerProfileEmail = '';
     const DEFAULT_FAMILY_CODE = '0706';
     window.selectedSignupRole = 'sot';
 
@@ -1179,6 +1180,7 @@
       const offered = transactions.filter(t => transactionBelongsToFamily(t) && t.from_role === currentUser.email && t.to_role !== currentUser.email).reduce((s,t) => s + Math.max(0, Number(t.amount || 0)), 0);
       const received = transactions.filter(t => transactionBelongsToFamily(t) && t.to_role === currentUser.email && t.from_role !== currentUser.email).reduce((s,t) => s + Math.max(0, Number(t.amount || 0)), 0);
       const partnerLabel = myRole === 'sot' ? 'Soției' : 'Soțului';
+      const visiblePartnerEmail = otherGoals[0]?.owner || partnerEmail() || '';
       const piggy = piggyBalance();
       const pig = piggyInfo(piggy);
       return `
@@ -1221,7 +1223,7 @@
         </div>
 
         <div class="section">
-          <div class="section-head" onclick="window.appActions.switchPage('partner')"><span>Obiectivele ${partnerLabel}</span><small>vezi profil</small></div>
+          <div class="section-head" onclick="window.appActions.openPartnerProfile('${encodeURIComponent(visiblePartnerEmail)}')"><span>Obiectivele ${partnerLabel}</span><small>vezi profil</small></div>
           <div class="space-y-3">${otherGoals.length ? otherGoals.slice(0,2).map(g => goalCard(g, false)).join('') : emptyHTML('Partenerul nu are obiective.')}</div>
         </div>
 
@@ -1417,17 +1419,20 @@
     }
 
     function partnerHTML() {
-      const pEmail = partnerEmail();
+      const savedPartnerEmail = selectedPartnerProfileEmail && selectedPartnerProfileEmail !== currentUser?.email ? selectedPartnerProfileEmail : '';
+      const pEmail = savedPartnerEmail || partnerEmail();
       const pRole = pEmail ? getRole(pEmail) : (getRole(currentUser.email) === 'sot' ? 'sotie' : 'sot');
       return `
         ${backButton()}
-        <div class="top-card text-center">
+        <div class="top-card text-center mb-6">
           <div class="mx-auto mb-3" style="width:max-content">${avatarHTML(pEmail, true)}</div>
           <h2 class="text-2xl font-medium">${roleLabel(pRole)}</h2>
           <p class="text-xs muted mt-1">${pEmail || 'Profil partener'}</p>
         </div>
-        ${profileGoalSections(pEmail || '', false)}
-        ${commonGoalSections()}`;
+        <div class="mt-5">
+          ${profileGoalSections(pEmail || '', false)}
+          ${commonGoalSections()}
+        </div>`;
     }
 
     function goalCategoryTile(title, count, kind, email, tone = 'active-cat') {
@@ -1686,11 +1691,18 @@
           btn.textContent = isLogin ? 'Conectare' : 'Creează cont'; btn.disabled = false;
         }
       },
-      switchPage(page) { previousPage = currentPage; currentPage = page; renderApp(); },
+      switchPage(page) { if (page !== 'partner') selectedPartnerProfileEmail = ''; previousPage = currentPage; currentPage = page; renderApp(); },
       goBack() { currentPage = previousPage && previousPage !== currentPage ? previousPage : 'home'; renderApp(); },
       openCalculator() { previousPage = currentPage; currentPage = 'calculator'; renderApp(); },
       openCalendar() { previousPage = currentPage; currentPage = 'calendar'; renderApp(); },
       openPiggy() { previousPage = currentPage; currentPage = 'piggy'; renderApp(); },
+      openPartnerProfile(encodedEmail = '') {
+        const decoded = encodedEmail ? decodeURIComponent(encodedEmail) : '';
+        selectedPartnerProfileEmail = decoded && decoded !== currentUser?.email ? decoded : (partnerEmail() || '');
+        previousPage = currentPage;
+        currentPage = 'partner';
+        renderApp();
+      },
       openStats(id) { selectedGoalId = id; previousPage = currentPage; currentPage = 'goalStats'; renderApp(); },
       openGoalCategory(kind, encodedEmail = '') { selectedGoalListKind = kind; selectedGoalListEmail = encodedEmail; previousPage = currentPage; currentPage = 'goalList'; renderApp(); },
       setDate(d) { selectedDate = d; renderApp(); },
