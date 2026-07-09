@@ -45,9 +45,132 @@
             0% { transform: translateY(0) rotate(0deg); opacity: 1; }
             100% { transform: translateY(105vh) rotate(720deg); opacity: 0; }
         }
+
+
+        /* INTERFAȚĂ NOUĂ - Premium Mobile UI */
+        body.ui-v2 {
+            background:
+                radial-gradient(circle at 12% 8%, rgba(239, 68, 68, .20), transparent 32%),
+                radial-gradient(circle at 90% 18%, rgba(99, 102, 241, .24), transparent 34%),
+                linear-gradient(145deg, #fff7f7 0%, #f7f8ff 48%, #f8fafc 100%) !important;
+            overflow-x: hidden;
+        }
+        html.dark body.ui-v2 {
+            background:
+                radial-gradient(circle at 10% 4%, rgba(239, 68, 68, .16), transparent 30%),
+                radial-gradient(circle at 90% 10%, rgba(99, 102, 241, .16), transparent 34%),
+                linear-gradient(145deg, #020617 0%, #0f172a 58%, #111827 100%) !important;
+        }
+        body.ui-v2::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            background-image:
+                linear-gradient(rgba(255,255,255,.32) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,.25) 1px, transparent 1px);
+            background-size: 34px 34px;
+            mask-image: linear-gradient(to bottom, rgba(0,0,0,.18), transparent 65%);
+            z-index: -1;
+        }
+        body.ui-v2 #app {
+            background: rgba(248, 250, 252, .72) !important;
+            backdrop-filter: blur(22px);
+            border-left: 1px solid rgba(255,255,255,.65);
+            border-right: 1px solid rgba(255,255,255,.65);
+            box-shadow: 0 30px 90px rgba(15, 23, 42, .18) !important;
+        }
+        html.dark body.ui-v2 #app {
+            background: rgba(15, 23, 42, .72) !important;
+            border-color: rgba(148, 163, 184, .12);
+            box-shadow: 0 30px 90px rgba(0, 0, 0, .40) !important;
+        }
+        body.ui-v2 .premium-hero {
+            position: relative;
+            overflow: hidden;
+            padding: 18px;
+            border-radius: 30px;
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 48%, #ef4444 100%);
+            box-shadow: 0 20px 45px rgba(79, 70, 229, .24);
+        }
+        body.ui-v2 .premium-hero::after {
+            content: "";
+            position: absolute;
+            width: 140px;
+            height: 140px;
+            right: -60px;
+            top: -55px;
+            border-radius: 999px;
+            background: rgba(255,255,255,.20);
+        }
+        body.ui-v2 .premium-hero h2,
+        body.ui-v2 .premium-hero p { color: white !important; }
+        body.ui-v2 .premium-hero button {
+            background: rgba(255,255,255,.20) !important;
+            border-color: rgba(255,255,255,.28) !important;
+            color: white !important;
+            backdrop-filter: blur(12px);
+        }
+        body.ui-v2 .premium-panel {
+            background: rgba(255, 255, 255, .82) !important;
+            border: 1px solid rgba(255, 255, 255, .72) !important;
+            box-shadow: 0 18px 45px rgba(15, 23, 42, .08) !important;
+            backdrop-filter: blur(18px);
+        }
+        html.dark body.ui-v2 .premium-panel {
+            background: rgba(30, 41, 59, .70) !important;
+            border-color: rgba(148, 163, 184, .16) !important;
+            box-shadow: 0 18px 45px rgba(0, 0, 0, .20) !important;
+        }
+        body.ui-v2 .premium-goal {
+            background: linear-gradient(180deg, rgba(255,255,255,.92), rgba(248,250,252,.86)) !important;
+            border: 1px solid rgba(226, 232, 240, .78) !important;
+            box-shadow: 0 14px 35px rgba(15, 23, 42, .07);
+            border-radius: 26px !important;
+        }
+        html.dark body.ui-v2 .premium-goal {
+            background: linear-gradient(180deg, rgba(30,41,59,.86), rgba(15,23,42,.76)) !important;
+            border-color: rgba(148,163,184,.16) !important;
+        }
+        body.ui-v2 .premium-stat {
+            background: rgba(255,255,255,.78) !important;
+            border: 1px solid rgba(255,255,255,.72) !important;
+            box-shadow: 0 14px 35px rgba(15,23,42,.07) !important;
+            backdrop-filter: blur(14px);
+        }
+        html.dark body.ui-v2 .premium-stat {
+            background: rgba(30,41,59,.70) !important;
+            border-color: rgba(148,163,184,.16) !important;
+        }
+        body.ui-v2 .premium-nav {
+            background: rgba(255,255,255,.82) !important;
+            backdrop-filter: blur(20px);
+            border-top: 1px solid rgba(226,232,240,.75) !important;
+            box-shadow: 0 -18px 45px rgba(15,23,42,.10) !important;
+        }
+        html.dark body.ui-v2 .premium-nav {
+            background: rgba(15,23,42,.84) !important;
+            border-top-color: rgba(148,163,184,.16) !important;
+        }
+        body.ui-v2 .premium-sheet {
+            background: rgba(255,255,255,.92) !important;
+            backdrop-filter: blur(18px);
+            border: 1px solid rgba(255,255,255,.70);
+        }
+        html.dark body.ui-v2 .premium-sheet {
+            background: rgba(30,41,59,.92) !important;
+            border-color: rgba(148,163,184,.16);
+        }
+        body.ui-v2 input,
+        body.ui-v2 textarea {
+            border-radius: 18px !important;
+        }
+        body.ui-v2 button { -webkit-tap-highlight-color: transparent; }
+        body.ui-v2 button:active { transform: scale(.98); }
+
     </style>
 </head>
-<body class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 antialiased min-h-screen transition-colors duration-300">
+<body class="ui-v2 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 antialiased min-h-screen transition-colors duration-300">
     <div id="app" class="max-w-md mx-auto min-h-screen flex flex-col relative pb-20 shadow-2xl bg-slate-50 dark:bg-slate-900">
         <div class="flex h-screen items-center justify-center text-indigo-500 font-bold">Se încarcă...</div>
     </div>
@@ -253,7 +376,7 @@
             `;
 
             appContainer.innerHTML = `
-                <div class="flex-1 flex flex-col justify-center px-6 py-12 fade-in min-h-screen bg-white dark:bg-slate-900">
+                <div class="flex-1 flex flex-col justify-center px-6 py-12 fade-in min-h-screen bg-transparent">
                     <div class="text-center mb-10">
                         <div class="inline-flex items-center justify-center w-20 h-20 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 rounded-full mb-4 shadow-sm">
                             <i class="fas fa-heart text-3xl"></i>
@@ -318,7 +441,7 @@
             const totalPrimit = transactions.filter(t => t.to_role === currentUser.email && t.from_role !== currentUser.email).reduce((sum, t) => sum + Math.max(0, Number(t.amount || 0)), 0);
 
             return `
-                <header class="flex justify-between items-center mb-5">
+                <header class="premium-hero flex justify-between items-center mb-5">
                     <div>
                         <h2 class="font-bold text-slate-800 dark:text-white text-2xl">Salut, ${myRoleName}!</h2>
                         <p class="text-sm text-slate-500 dark:text-slate-400">Situația obiectivelor voastre</p>
@@ -332,18 +455,18 @@
                 </header>
 
                 <div class="grid grid-cols-2 gap-3 mb-5">
-                    <div class="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm">
+                    <div class="premium-stat bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm">
                         <p class="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase mb-1">Ai oferit</p>
                         <p class="text-2xl font-black text-slate-800 dark:text-white">${money(totalOferit)} <span class="text-sm font-medium text-slate-500">RON</span></p>
                     </div>
-                    <div class="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm">
+                    <div class="premium-stat bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm">
                         <p class="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase mb-1">Ai primit</p>
                         <p class="text-2xl font-black text-slate-800 dark:text-white">${money(totalPrimit)} <span class="text-sm font-medium text-slate-500">RON</span></p>
                     </div>
                 </div>
 
                 <div class="space-y-6">
-                    <section class="bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-sm border border-slate-100 dark:border-slate-700">
+                    <section class="premium-panel bg-white dark:bg-slate-800 rounded-[2rem] p-4 shadow-sm border border-slate-100 dark:border-slate-700">
                         <div class="flex items-center justify-between mb-3">
                             <h3 class="font-bold text-lg text-slate-800 dark:text-white">Obiectivele Mele</h3>
                             <span class="h-1.5 w-16 rounded-full ${accentBar(myRole)}"></span>
@@ -353,7 +476,7 @@
                         </div>
                     </section>
 
-                    <section class="${accentBgSoft(partnerRole)} rounded-2xl p-4 shadow-sm border border-slate-100 dark:border-slate-700">
+                    <section class="premium-panel ${accentBgSoft(partnerRole)} rounded-[2rem] p-4 shadow-sm border border-slate-100 dark:border-slate-700">
                         <div onclick="window.appActions.switchTab('partner')" class="flex items-center justify-between mb-3 cursor-pointer">
                             <h3 class="font-bold text-lg text-slate-800 dark:text-white">Obiectivele ${partnerRoleName}</h3>
                             <span class="h-1.5 w-16 rounded-full ${accentBar(partnerRole)}"></span>
@@ -364,7 +487,7 @@
                         </div>
                     </section>
 
-                    <section class="bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-sm border border-slate-100 dark:border-slate-700">
+                    <section class="premium-panel bg-white dark:bg-slate-800 rounded-[2rem] p-4 shadow-sm border border-slate-100 dark:border-slate-700">
                         <div class="flex justify-between items-center mb-3">
                             <h3 class="font-bold text-lg text-slate-800 dark:text-white"><i class="far fa-calendar-alt text-indigo-500 mr-2"></i>Istoric</h3>
                             <span class="text-xs text-slate-400 dark:text-slate-500">glisează zilele</span>
@@ -444,7 +567,7 @@
                     <button onclick="window.appActions.switchTab('home')" class="mb-6 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white transition-colors flex items-center gap-2 font-medium bg-slate-100 dark:bg-slate-800 px-4 py-2 rounded-full w-max">
                         <i class="fas fa-arrow-left"></i> Acasă
                     </button>
-                    <div class="${accentBgSoft(partnerRole)} rounded-3xl p-6 shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col items-center mb-6 relative">
+                    <div class="premium-panel ${accentBgSoft(partnerRole)} rounded-[2rem] p-6 shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col items-center mb-6 relative">
                         ${getAvatarHtml(24, partnerEmail)}
                         <h2 class="font-bold text-2xl text-slate-800 dark:text-white mt-4 mb-1">${partnerRoleName}</h2>
                         <p class="text-xs text-slate-500 dark:text-slate-400 mb-3">${partnerEmail || 'Profil partener'}</p>
@@ -478,7 +601,7 @@
             return `
                 <div class="fade-in max-w-sm mx-auto mt-4">
                     <h2 class="font-bold text-2xl text-slate-800 dark:text-white mb-6 text-center">Setări Profil</h2>
-                    <div class="bg-white dark:bg-slate-800 rounded-3xl p-6 shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col items-center mb-6 relative">
+                    <div class="premium-panel bg-white dark:bg-slate-800 rounded-[2rem] p-6 shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col items-center mb-6 relative">
                         <label class="cursor-pointer relative group">
                             ${getAvatarHtml(24, currentUser.email)}
                             <div class="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
@@ -489,7 +612,7 @@
                         <h3 class="mt-4 font-bold text-lg dark:text-white">${myRoleName}</h3>
                         <p class="text-sm text-slate-500 dark:text-slate-400">${currentUser.email}</p>
                     </div>
-                    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden mb-6">
+                    <div class="premium-panel bg-white dark:bg-slate-800 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden mb-6">
                         <div class="flex items-center justify-between p-4 border-b border-slate-100 dark:border-slate-700">
                             <div class="flex items-center gap-3 text-slate-700 dark:text-slate-200">
                                 <div class="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center"><i class="fas fa-moon"></i></div>
@@ -519,7 +642,7 @@
                     <button onclick="window.appActions.goBack()" class="mb-5 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white transition-colors flex items-center gap-2 font-medium bg-slate-100 dark:bg-slate-800 px-4 py-2 rounded-full w-max">
                         <i class="fas fa-arrow-left"></i> Înapoi
                     </button>
-                    <div class="bg-white dark:bg-slate-800 rounded-3xl p-5 shadow-sm border border-slate-100 dark:border-slate-700 mb-5">
+                    <div class="premium-panel bg-white dark:bg-slate-800 rounded-[2rem] p-5 shadow-sm border border-slate-100 dark:border-slate-700 mb-5">
                         <div class="flex items-center gap-3 mb-4">
                             <div class="w-11 h-11 rounded-2xl bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 flex items-center justify-center"><i class="fas fa-calculator"></i></div>
                             <div>
@@ -539,7 +662,7 @@
                             <button onclick="window.appActions.calcEquals()" class="py-3 rounded-2xl font-bold bg-green-500 hover:bg-green-600 text-white">=</button>
                         </div>
                     </div>
-                    <div class="bg-white dark:bg-slate-800 rounded-3xl p-5 shadow-sm border border-slate-100 dark:border-slate-700 mb-5">
+                    <div class="premium-panel bg-white dark:bg-slate-800 rounded-[2rem] p-5 shadow-sm border border-slate-100 dark:border-slate-700 mb-5">
                         <h3 class="font-bold text-lg mb-3 text-slate-800 dark:text-white">Salvează calcul</h3>
                         <textarea id="calcNoteInput" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl outline-none dark:text-white text-sm mb-3" rows="2" placeholder="Adaugă o notiță..."></textarea>
                         <button onclick="window.appActions.saveCalculation()" id="saveCalcBtn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl">Salvează Calcul</button>
@@ -548,7 +671,7 @@
                         <h3 class="font-bold text-lg mb-3 text-slate-800 dark:text-white">Calcule salvate</h3>
                         <div class="space-y-3">
                             ${calculatorHistory.length === 0 ? `<p class="text-center text-slate-400 text-sm py-4">Nu ai calcule salvate.</p>` : calculatorHistory.map(c => `
-                                <div class="bg-white dark:bg-slate-800 rounded-2xl p-4 border border-slate-100 dark:border-slate-700 shadow-sm">
+                                <div class="premium-panel bg-white dark:bg-slate-800 rounded-2xl p-4 border border-slate-100 dark:border-slate-700 shadow-sm">
                                     <div class="flex justify-between gap-3">
                                         <div>
                                             <p class="font-bold text-slate-800 dark:text-white">${c.expression} = ${c.result}</p>
@@ -583,7 +706,7 @@
                     <button onclick="window.appActions.goBack()" class="mb-5 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white transition-colors flex items-center gap-2 font-medium bg-slate-100 dark:bg-slate-800 px-4 py-2 rounded-full w-max">
                         <i class="fas fa-arrow-left"></i> Înapoi
                     </button>
-                    <div class="bg-white dark:bg-slate-800 rounded-3xl p-5 shadow-sm border border-slate-100 dark:border-slate-700 mb-5">
+                    <div class="premium-panel bg-white dark:bg-slate-800 rounded-[2rem] p-5 shadow-sm border border-slate-100 dark:border-slate-700 mb-5">
                         <p class="text-xs text-slate-400 mb-1">Statistici obiectiv</p>
                         <h2 class="font-black text-2xl text-slate-800 dark:text-white mb-4">${goal.title}</h2>
                         <div class="flex justify-between text-sm mb-2">
@@ -596,13 +719,13 @@
                         <p class="text-right text-xs font-bold text-slate-500">${percent}%</p>
                     </div>
                     <div class="grid grid-cols-3 gap-3 mb-5">
-                        <div class="bg-white dark:bg-slate-800 rounded-2xl p-3 border border-slate-100 dark:border-slate-700 text-center">
+                        <div class="premium-stat bg-white dark:bg-slate-800 rounded-2xl p-3 border border-slate-100 dark:border-slate-700 text-center">
                             <p class="text-xs text-slate-400">Pus</p><p class="font-black text-green-500">${money(added)}</p>
                         </div>
-                        <div class="bg-white dark:bg-slate-800 rounded-2xl p-3 border border-slate-100 dark:border-slate-700 text-center">
+                        <div class="premium-stat bg-white dark:bg-slate-800 rounded-2xl p-3 border border-slate-100 dark:border-slate-700 text-center">
                             <p class="text-xs text-slate-400">Scos</p><p class="font-black text-red-500">${money(removed)}</p>
                         </div>
-                        <div class="bg-white dark:bg-slate-800 rounded-2xl p-3 border border-slate-100 dark:border-slate-700 text-center">
+                        <div class="premium-stat bg-white dark:bg-slate-800 rounded-2xl p-3 border border-slate-100 dark:border-slate-700 text-center">
                             <p class="text-xs text-slate-400">Mișcări</p><p class="font-black text-slate-800 dark:text-white">${goalTrans.length}</p>
                         </div>
                     </div>
@@ -612,7 +735,7 @@
                             const list = grouped[d];
                             const total = list.reduce((s, t) => s + Number(t.amount || 0), 0);
                             return `
-                                <div class="bg-white dark:bg-slate-800 rounded-2xl p-4 border border-slate-100 dark:border-slate-700 shadow-sm">
+                                <div class="premium-panel bg-white dark:bg-slate-800 rounded-2xl p-4 border border-slate-100 dark:border-slate-700 shadow-sm">
                                     <div class="flex justify-between items-center mb-2">
                                         <p class="font-bold text-slate-800 dark:text-white capitalize">${formatFullDate(d)}</p>
                                         <p class="font-black ${total < 0 ? 'text-red-500' : 'text-green-500'}">${total >= 0 ? '+' : ''}${money(total)}</p>
@@ -632,7 +755,7 @@
             const isHome = currentTab === 'home';
             const isProfile = currentTab === 'profile';
             return `
-                <nav class="fixed bottom-0 w-full max-w-md mx-auto bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 flex justify-around items-center h-16 pb-safe z-40 rounded-t-2xl shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
+                <nav class="premium-nav fixed bottom-0 w-full max-w-md mx-auto bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 flex justify-around items-center h-16 pb-safe z-40 rounded-t-[2rem] shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
                     <button onclick="window.appActions.switchTab('home')" class="flex flex-col items-center justify-center w-20 h-full ${isHome ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'} transition-colors">
                         <i class="fas fa-home text-xl mb-1"></i><span class="text-[10px] font-semibold">Acasă</span>
                     </button>
@@ -667,7 +790,7 @@
             const isCompleted = percent >= 100;
             const btnClass = accentButton(role);
             return `
-                <div onclick="window.appActions.openGoalStats('${goal.id}')" class="goal-card bg-slate-50 dark:bg-slate-700/50 border border-slate-100 dark:border-slate-600 rounded-2xl p-4 relative overflow-hidden cursor-pointer">
+                <div onclick="window.appActions.openGoalStats('${goal.id}')" class="goal-card premium-goal bg-slate-50 dark:bg-slate-700/50 border border-slate-100 dark:border-slate-600 rounded-2xl p-4 relative overflow-hidden cursor-pointer">
                     ${isCompleted ? `<div class="absolute top-2 right-2 bg-green-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-md leading-none">COMPLET</div>` : ''}
                     <div class="flex justify-between items-start gap-3 mb-3 pr-12">
                         <div>
@@ -839,7 +962,7 @@
             openAddGoalModal: () => {
                 document.getElementById('modalContainer').innerHTML = `
                     <div class="fixed inset-0 modal-backdrop flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
-                        <div class="bg-white dark:bg-slate-800 rounded-t-3xl sm:rounded-3xl shadow-xl w-full max-w-md p-6 fade-in relative transition-colors">
+                        <div class="premium-sheet bg-white dark:bg-slate-800 rounded-t-[2rem] sm:rounded-[2rem] shadow-xl w-full max-w-md p-6 fade-in relative transition-colors">
                             <div class="w-12 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full mx-auto mb-6 sm:hidden"></div>
                             <button onclick="window.appActions.closeModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-white hidden sm:block"><i class="fas fa-times text-xl"></i></button>
                             <h3 class="text-xl font-bold mb-4 text-slate-800 dark:text-white">Adaugă Obiectiv</h3>
@@ -877,7 +1000,7 @@
                 const btnClass = mode === 'remove_self' ? 'bg-slate-700 hover:bg-slate-800 text-white' : 'bg-green-500 hover:bg-green-600 text-white';
                 document.getElementById('modalContainer').innerHTML = `
                     <div class="fixed inset-0 modal-backdrop flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
-                        <div class="bg-white dark:bg-slate-800 rounded-t-3xl sm:rounded-3xl shadow-xl w-full max-w-md p-6 fade-in relative">
+                        <div class="premium-sheet bg-white dark:bg-slate-800 rounded-t-[2rem] sm:rounded-[2rem] shadow-xl w-full max-w-md p-6 fade-in relative">
                             <div class="w-12 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full mx-auto mb-6 sm:hidden"></div>
                             <h3 class="text-xl font-bold mb-1 text-slate-800 dark:text-white">${title}</h3>
                             <p class="text-sm text-slate-500 dark:text-slate-400 mb-5">Pentru „${goal.title}”</p>
